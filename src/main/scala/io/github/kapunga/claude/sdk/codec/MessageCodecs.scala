@@ -7,24 +7,7 @@ object MessageCodecs:
 
   import ContentBlockCodecs.given
 
-  given Decoder[AssistantMessageError] = Decoder[String].emap {
-    case "authentication_failed" => Right(AssistantMessageError.AuthenticationFailed)
-    case "billing_error"         => Right(AssistantMessageError.BillingError)
-    case "rate_limit"            => Right(AssistantMessageError.RateLimit)
-    case "invalid_request"       => Right(AssistantMessageError.InvalidRequest)
-    case "server_error"          => Right(AssistantMessageError.ServerError)
-    case "unknown"               => Right(AssistantMessageError.Unknown)
-    case other                   => Left(s"Unknown assistant message error: $other")
-  }
-
-  given Encoder[AssistantMessageError] = Encoder[String].contramap {
-    case AssistantMessageError.AuthenticationFailed => "authentication_failed"
-    case AssistantMessageError.BillingError         => "billing_error"
-    case AssistantMessageError.RateLimit            => "rate_limit"
-    case AssistantMessageError.InvalidRequest       => "invalid_request"
-    case AssistantMessageError.ServerError          => "server_error"
-    case AssistantMessageError.Unknown              => "unknown"
-  }
+  // AssistantMessageError encoder/decoder provided by its WireEnum companion — import via types.*
 
   /** Decode a Message from a JSON object using the "type" discriminator. */
   given Decoder[Message] = Decoder.instance { c =>

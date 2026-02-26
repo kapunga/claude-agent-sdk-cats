@@ -92,16 +92,11 @@ private[sdk] object SubprocessCLITransport:
     options.fallbackModel.foreach(m => cmd += "--fallback-model" += m)
 
     if options.betas.nonEmpty then
-      cmd += "--betas" += options.betas.map(_.value).mkString(",")
+      cmd += "--betas" += options.betas.map(_.wireValue).mkString(",")
 
     options.permissionPromptToolName.foreach(n => cmd += "--permission-prompt-tool" += n)
     options.permissionMode.foreach { pm =>
-      val mode = pm match
-        case PermissionMode.Default           => "default"
-        case PermissionMode.AcceptEdits       => "acceptEdits"
-        case PermissionMode.Plan              => "plan"
-        case PermissionMode.BypassPermissions => "bypassPermissions"
-      cmd += "--permission-mode" += mode
+      cmd += "--permission-mode" += pm.wireValue
     }
 
     if options.continueConversation then cmd += "--continue"
@@ -129,11 +124,7 @@ private[sdk] object SubprocessCLITransport:
 
     // Setting sources
     val sourcesValue = options.settingSources
-      .map(_.map {
-        case SettingSource.User    => "user"
-        case SettingSource.Project => "project"
-        case SettingSource.Local   => "local"
-      }.mkString(","))
+      .map(_.map(_.wireValue).mkString(","))
       .getOrElse("")
     cmd += "--setting-sources" += sourcesValue
 
@@ -162,17 +153,12 @@ private[sdk] object SubprocessCLITransport:
     resolvedMaxThinkingTokens.foreach(t => cmd += "--max-thinking-tokens" += t.toString)
 
     options.effort.foreach { e =>
-      val v = e match
-        case Effort.Low    => "low"
-        case Effort.Medium => "medium"
-        case Effort.High   => "high"
-        case Effort.Max    => "max"
-      cmd += "--effort" += v
+      cmd += "--effort" += e.wireValue
     }
 
     // Output format / JSON schema
     options.outputFormat.foreach { of =>
-      if of.formatType == "json_schema" then
+      if of.formatType == OutputFormatType.JsonSchema then
         of.schema.foreach { schema =>
           cmd += "--json-schema" += Json.fromJsonObject(schema).noSpaces
         }

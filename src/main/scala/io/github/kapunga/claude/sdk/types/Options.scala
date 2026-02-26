@@ -1,18 +1,46 @@
 package io.github.kapunga.claude.sdk.types
 
 import io.circe.JsonObject
+import io.github.kapunga.claude.sdk.codec.WireEnum
 
 /** SDK Beta features. */
-enum SdkBeta(val value: String):
+enum SdkBeta(val wireValue: String) extends WireEnum:
   case Context1m extends SdkBeta("context-1m-2025-08-07")
 
+object SdkBeta extends WireEnum.Companion[SdkBeta](SdkBeta.values)
+
 /** Setting source types. */
-enum SettingSource:
-  case User, Project, Local
+enum SettingSource(val wireValue: String) extends WireEnum:
+  case User    extends SettingSource("user")
+  case Project extends SettingSource("project")
+  case Local   extends SettingSource("local")
+
+object SettingSource extends WireEnum.Companion[SettingSource](SettingSource.values)
+
+/** Effort level for thinking depth. */
+enum Effort(val wireValue: String) extends WireEnum:
+  case Low    extends Effort("low")
+  case Medium extends Effort("medium")
+  case High   extends Effort("high")
+  case Max    extends Effort("max")
+
+object Effort extends WireEnum.Companion[Effort](Effort.values)
+
+/** Output format type for structured outputs. */
+enum OutputFormatType(val wireValue: String) extends WireEnum:
+  case JsonSchema extends OutputFormatType("json_schema")
+
+object OutputFormatType extends WireEnum.Companion[OutputFormatType](OutputFormatType.values)
+
+/** Preset name for system prompts and tools. */
+enum PresetName(val wireValue: String) extends WireEnum:
+  case ClaudeCode extends PresetName("claude_code")
+
+object PresetName extends WireEnum.Companion[PresetName](PresetName.values)
 
 /** System prompt preset configuration. */
 final case class SystemPromptPreset(
-    preset: String, // "claude_code"
+    preset: PresetName,
     append: Option[String] = None,
 )
 
@@ -23,7 +51,7 @@ enum SystemPrompt:
 
 /** Tools preset configuration. */
 final case class ToolsPreset(
-    preset: String, // "claude_code"
+    preset: PresetName,
 )
 
 /** Tools configuration - either a list of tool names or a preset. */
@@ -71,10 +99,6 @@ enum ThinkingConfig:
   case Enabled(budgetTokens: Int)
   case Disabled
 
-/** Effort level for thinking depth. */
-enum Effort:
-  case Low, Medium, High, Max
-
 /** MCP servers configuration - either a map or a path/JSON string. */
 enum McpServersConfig:
   case ServerMap(servers: Map[String, McpServerConfig])
@@ -82,7 +106,7 @@ enum McpServersConfig:
 
 /** Output format for structured outputs. */
 final case class OutputFormat(
-    formatType: String, // "json_schema"
+    formatType: OutputFormatType,
     schema: Option[JsonObject] = None,
 )
 

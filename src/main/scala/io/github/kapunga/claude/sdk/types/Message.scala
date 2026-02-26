@@ -1,6 +1,7 @@
 package io.github.kapunga.claude.sdk.types
 
 import io.circe.JsonObject
+import io.github.kapunga.claude.sdk.codec.WireEnum
 
 /** Messages exchanged with the Claude Code CLI. */
 sealed trait Message
@@ -14,8 +15,15 @@ final case class UserMessage(
 ) extends Message
 
 /** Error types that can occur on assistant messages. */
-enum AssistantMessageError:
-  case AuthenticationFailed, BillingError, RateLimit, InvalidRequest, ServerError, Unknown
+enum AssistantMessageError(val wireValue: String) extends WireEnum:
+  case AuthenticationFailed extends AssistantMessageError("authentication_failed")
+  case BillingError         extends AssistantMessageError("billing_error")
+  case RateLimit            extends AssistantMessageError("rate_limit")
+  case InvalidRequest       extends AssistantMessageError("invalid_request")
+  case ServerError          extends AssistantMessageError("server_error")
+  case Unknown              extends AssistantMessageError("unknown")
+
+object AssistantMessageError extends WireEnum.Companion[AssistantMessageError](AssistantMessageError.values)
 
 /** Assistant message with content blocks. */
 final case class AssistantMessage(

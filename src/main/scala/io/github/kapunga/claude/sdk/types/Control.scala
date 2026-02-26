@@ -22,7 +22,7 @@ final case class SDKControlInitializeRequest(
 ) extends SDKControlRequestData
 
 final case class SDKControlSetPermissionModeRequest(
-    mode: String,
+    mode: PermissionMode,
 ) extends SDKControlRequestData
 
 final case class SDKHookCallbackRequest(

@@ -2,18 +2,33 @@ package io.github.kapunga.claude.sdk.types
 
 import cats.effect.IO
 import io.circe.JsonObject
+import io.github.kapunga.claude.sdk.codec.WireEnum
 
 /** Permission modes controlling how tools are authorized. */
-enum PermissionMode:
-  case Default, AcceptEdits, Plan, BypassPermissions
+enum PermissionMode(val wireValue: String) extends WireEnum:
+  case Default           extends PermissionMode("default")
+  case AcceptEdits       extends PermissionMode("acceptEdits")
+  case Plan              extends PermissionMode("plan")
+  case BypassPermissions extends PermissionMode("bypassPermissions")
+
+object PermissionMode extends WireEnum.Companion[PermissionMode](PermissionMode.values)
 
 /** Behaviors for permission rules. */
-enum PermissionBehavior:
-  case Allow, Deny, Ask
+enum PermissionBehavior(val wireValue: String) extends WireEnum:
+  case Allow extends PermissionBehavior("allow")
+  case Deny  extends PermissionBehavior("deny")
+  case Ask   extends PermissionBehavior("ask")
+
+object PermissionBehavior extends WireEnum.Companion[PermissionBehavior](PermissionBehavior.values)
 
 /** Destination for permission updates. */
-enum PermissionUpdateDestination:
-  case UserSettings, ProjectSettings, LocalSettings, Session
+enum PermissionUpdateDestination(val wireValue: String) extends WireEnum:
+  case UserSettings    extends PermissionUpdateDestination("userSettings")
+  case ProjectSettings extends PermissionUpdateDestination("projectSettings")
+  case LocalSettings   extends PermissionUpdateDestination("localSettings")
+  case Session         extends PermissionUpdateDestination("session")
+
+object PermissionUpdateDestination extends WireEnum.Companion[PermissionUpdateDestination](PermissionUpdateDestination.values)
 
 /** A single permission rule value. */
 final case class PermissionRuleValue(
@@ -22,8 +37,15 @@ final case class PermissionRuleValue(
 )
 
 /** Types of permission updates. */
-enum PermissionUpdateType:
-  case AddRules, ReplaceRules, RemoveRules, SetMode, AddDirectories, RemoveDirectories
+enum PermissionUpdateType(val wireValue: String) extends WireEnum:
+  case AddRules          extends PermissionUpdateType("addRules")
+  case ReplaceRules      extends PermissionUpdateType("replaceRules")
+  case RemoveRules       extends PermissionUpdateType("removeRules")
+  case SetMode           extends PermissionUpdateType("setMode")
+  case AddDirectories    extends PermissionUpdateType("addDirectories")
+  case RemoveDirectories extends PermissionUpdateType("removeDirectories")
+
+object PermissionUpdateType extends WireEnum.Companion[PermissionUpdateType](PermissionUpdateType.values)
 
 /** Permission update configuration. */
 final case class PermissionUpdate(

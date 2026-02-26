@@ -49,7 +49,7 @@ class TypesSpec extends CatsEffectSuite:
   }
 
   test("SdkBeta enum") {
-    assertEquals(SdkBeta.Context1m.value, "context-1m-2025-08-07")
+    assertEquals(SdkBeta.Context1m.wireValue, "context-1m-2025-08-07")
   }
 
   test("McpServerConfig sealed trait covers all variants") {
@@ -91,4 +91,53 @@ class TypesSpec extends CatsEffectSuite:
     )
     assertEquals(matcher.matcher, Some("Bash|Write"))
     assertEquals(matcher.timeout, Some(30.0))
+  }
+
+  // --- wireValue round-trip tests ---
+
+  test("PermissionMode wireValue round-trip") {
+    PermissionMode.values.foreach { mode =>
+      assertEquals(PermissionMode.fromWireValue(mode.wireValue), Some(mode))
+    }
+    assertEquals(PermissionMode.fromWireValue("default"), Some(PermissionMode.Default))
+    assertEquals(PermissionMode.fromWireValue("bypassPermissions"), Some(PermissionMode.BypassPermissions))
+    assertEquals(PermissionMode.fromWireValue("unknown_value"), None)
+  }
+
+  test("HookEvent wireValue round-trip") {
+    HookEvent.values.foreach { event =>
+      assertEquals(HookEvent.fromWireValue(event.wireValue), Some(event))
+    }
+    assertEquals(HookEvent.fromWireValue("PreToolUse"), Some(HookEvent.PreToolUse))
+    assertEquals(HookEvent.fromWireValue("PermissionRequest"), Some(HookEvent.PermissionRequest))
+    assertEquals(HookEvent.fromWireValue("NonExistent"), None)
+  }
+
+  test("AssistantMessageError wireValue round-trip") {
+    AssistantMessageError.values.foreach { err =>
+      assertEquals(AssistantMessageError.fromWireValue(err.wireValue), Some(err))
+    }
+    assertEquals(AssistantMessageError.fromWireValue("rate_limit"), Some(AssistantMessageError.RateLimit))
+    assertEquals(AssistantMessageError.fromWireValue("nope"), None)
+  }
+
+  test("Effort wireValue round-trip") {
+    Effort.values.foreach { e =>
+      assertEquals(Effort.fromWireValue(e.wireValue), Some(e))
+    }
+    assertEquals(Effort.fromWireValue("high"), Some(Effort.High))
+  }
+
+  test("SettingSource wireValue round-trip") {
+    SettingSource.values.foreach { s =>
+      assertEquals(SettingSource.fromWireValue(s.wireValue), Some(s))
+    }
+  }
+
+  test("PermissionDecision wireValue round-trip") {
+    PermissionDecision.values.foreach { d =>
+      assertEquals(PermissionDecision.fromWireValue(d.wireValue), Some(d))
+    }
+    assertEquals(PermissionDecision.fromWireValue("allow"), Some(PermissionDecision.Allow))
+    assertEquals(PermissionDecision.fromWireValue("deny"), Some(PermissionDecision.Deny))
   }

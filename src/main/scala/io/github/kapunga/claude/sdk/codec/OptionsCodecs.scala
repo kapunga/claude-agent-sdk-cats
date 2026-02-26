@@ -9,6 +9,8 @@ import io.github.kapunga.claude.sdk.types.*
   */
 object OptionsCodecs:
 
+  // SettingSource, SdkBeta, Effort codecs are provided by their WireEnum companions — import via types.*
+
   given Encoder[SandboxNetworkConfig] = Encoder.instance { n =>
     val fields = List.newBuilder[(String, Json)]
     n.allowUnixSockets.foreach(v => fields += ("allowUnixSockets" -> v.asJson))
@@ -51,19 +53,4 @@ object OptionsCodecs:
     a.tools.foreach(v => fields += ("tools" -> v.asJson))
     a.model.foreach(v => fields += ("model" -> v.asJson))
     Json.fromFields(fields.result())
-  }
-
-  given Encoder[SettingSource] = Encoder[String].contramap {
-    case SettingSource.User    => "user"
-    case SettingSource.Project => "project"
-    case SettingSource.Local   => "local"
-  }
-
-  given Encoder[SdkBeta] = Encoder[String].contramap(_.value)
-
-  given Encoder[Effort] = Encoder[String].contramap {
-    case Effort.Low    => "low"
-    case Effort.Medium => "medium"
-    case Effort.High   => "high"
-    case Effort.Max    => "max"
   }

@@ -3,7 +3,7 @@ package io.github.kapunga.claude.sdk.examples
 import cats.effect.{IO, IOApp}
 import io.circe.{Json, JsonObject}
 import io.circe.syntax.*
-import io.github.kapunga.claude.sdk.McpTools
+import io.github.kapunga.claude.sdk.{JsonSchemaType, McpTools}
 import io.github.kapunga.claude.sdk.types.*
 
 object McpCalculator extends IOApp.Simple:
@@ -13,7 +13,7 @@ object McpCalculator extends IOApp.Simple:
     val addTool = McpTools.tool(
       name = "add",
       description = "Add two numbers",
-      inputSchema = McpTools.simpleSchema("a" -> "number", "b" -> "number"),
+      inputSchema = McpTools.simpleSchema("a" -> JsonSchemaType.NumberType, "b" -> JsonSchemaType.NumberType),
       handler = { args =>
         val a = args("a").flatMap(_.asNumber).flatMap(n => Some(n.toDouble)).getOrElse(0.0)
         val b = args("b").flatMap(_.asNumber).flatMap(n => Some(n.toDouble)).getOrElse(0.0)
@@ -27,7 +27,7 @@ object McpCalculator extends IOApp.Simple:
     val multiplyTool = McpTools.tool(
       name = "multiply",
       description = "Multiply two numbers",
-      inputSchema = McpTools.simpleSchema("a" -> "number", "b" -> "number"),
+      inputSchema = McpTools.simpleSchema("a" -> JsonSchemaType.NumberType, "b" -> JsonSchemaType.NumberType),
       handler = { args =>
         val a = args("a").flatMap(_.asNumber).flatMap(n => Some(n.toDouble)).getOrElse(0.0)
         val b = args("b").flatMap(_.asNumber).flatMap(n => Some(n.toDouble)).getOrElse(0.0)

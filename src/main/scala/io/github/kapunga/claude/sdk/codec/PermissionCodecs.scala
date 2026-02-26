@@ -6,42 +6,8 @@ import io.github.kapunga.claude.sdk.types.*
 
 object PermissionCodecs:
 
-  given Encoder[PermissionMode] = Encoder[String].contramap {
-    case PermissionMode.Default           => "default"
-    case PermissionMode.AcceptEdits       => "acceptEdits"
-    case PermissionMode.Plan              => "plan"
-    case PermissionMode.BypassPermissions => "bypassPermissions"
-  }
-
-  given Decoder[PermissionMode] = Decoder[String].emap {
-    case "default"           => Right(PermissionMode.Default)
-    case "acceptEdits"       => Right(PermissionMode.AcceptEdits)
-    case "plan"              => Right(PermissionMode.Plan)
-    case "bypassPermissions" => Right(PermissionMode.BypassPermissions)
-    case other               => Left(s"Unknown permission mode: $other")
-  }
-
-  given Encoder[PermissionBehavior] = Encoder[String].contramap {
-    case PermissionBehavior.Allow => "allow"
-    case PermissionBehavior.Deny  => "deny"
-    case PermissionBehavior.Ask   => "ask"
-  }
-
-  given Encoder[PermissionUpdateDestination] = Encoder[String].contramap {
-    case PermissionUpdateDestination.UserSettings    => "userSettings"
-    case PermissionUpdateDestination.ProjectSettings => "projectSettings"
-    case PermissionUpdateDestination.LocalSettings   => "localSettings"
-    case PermissionUpdateDestination.Session         => "session"
-  }
-
-  given Encoder[PermissionUpdateType] = Encoder[String].contramap {
-    case PermissionUpdateType.AddRules          => "addRules"
-    case PermissionUpdateType.ReplaceRules      => "replaceRules"
-    case PermissionUpdateType.RemoveRules       => "removeRules"
-    case PermissionUpdateType.SetMode           => "setMode"
-    case PermissionUpdateType.AddDirectories    => "addDirectories"
-    case PermissionUpdateType.RemoveDirectories => "removeDirectories"
-  }
+  // PermissionMode, PermissionBehavior, PermissionUpdateDestination, PermissionUpdateType
+  // codecs are provided by their WireEnum companions — import via types.*
 
   given Encoder[PermissionRuleValue] = Encoder.instance { r =>
     Json.obj(

@@ -2,7 +2,17 @@ package io.github.kapunga.claude.sdk
 
 import io.circe.{Json, JsonObject}
 import io.circe.syntax.*
+import io.github.kapunga.claude.sdk.codec.WireEnum
 import io.github.kapunga.claude.sdk.types.{McpToolHandler, SdkMcpTool}
+
+/** JSON Schema types for MCP tool parameters. */
+enum JsonSchemaType(val wireValue: String) extends WireEnum:
+  case StringType  extends JsonSchemaType("string")
+  case IntType     extends JsonSchemaType("integer")
+  case NumberType  extends JsonSchemaType("number")
+  case BooleanType extends JsonSchemaType("boolean")
+
+object JsonSchemaType extends WireEnum.Companion[JsonSchemaType](JsonSchemaType.values)
 
 /** Builder for creating SDK MCP tools. */
 object McpTools:
@@ -22,19 +32,11 @@ object McpTools:
   ): SdkMcpTool =
     SdkMcpTool(name, description, inputSchema, handler)
 
-  /** Create a simple JSON Schema for a tool with named string parameters. */
-  def simpleSchema(params: (String, String)*): JsonObject =
+  /** Create a simple JSON Schema for a tool with typed parameters. */
+  def simpleSchema(params: (String, JsonSchemaType)*): JsonObject =
     val properties = JsonObject.fromIterable(
-      params.map { case (name, typeName) =>
-        val jsonType = typeName match
-          case "string"  => "string"
-          case "int"     => "integer"
-          case "integer" => "integer"
-          case "number"  => "number"
-          case "float"   => "number"
-          case "boolean" => "boolean"
-          case _         => "string"
-        name -> Json.obj("type" -> jsonType.asJson)
+      params.map { case (name, schemaType) =>
+        name -> Json.obj("type" -> schemaType.wireValue.asJson)
       }
     )
     JsonObject(

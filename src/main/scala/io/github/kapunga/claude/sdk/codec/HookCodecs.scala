@@ -6,39 +6,14 @@ import io.github.kapunga.claude.sdk.types.*
 
 object HookCodecs:
 
-  given Encoder[HookEvent] = Encoder[String].contramap {
-    case HookEvent.PreToolUse          => "PreToolUse"
-    case HookEvent.PostToolUse         => "PostToolUse"
-    case HookEvent.PostToolUseFailure  => "PostToolUseFailure"
-    case HookEvent.UserPromptSubmit    => "UserPromptSubmit"
-    case HookEvent.Stop                => "Stop"
-    case HookEvent.SubagentStop        => "SubagentStop"
-    case HookEvent.PreCompact          => "PreCompact"
-    case HookEvent.Notification        => "Notification"
-    case HookEvent.SubagentStart       => "SubagentStart"
-    case HookEvent.PermissionRequest   => "PermissionRequest"
-  }
-
-  given Decoder[HookEvent] = Decoder[String].emap {
-    case "PreToolUse"         => Right(HookEvent.PreToolUse)
-    case "PostToolUse"        => Right(HookEvent.PostToolUse)
-    case "PostToolUseFailure" => Right(HookEvent.PostToolUseFailure)
-    case "UserPromptSubmit"   => Right(HookEvent.UserPromptSubmit)
-    case "Stop"               => Right(HookEvent.Stop)
-    case "SubagentStop"       => Right(HookEvent.SubagentStop)
-    case "PreCompact"         => Right(HookEvent.PreCompact)
-    case "Notification"       => Right(HookEvent.Notification)
-    case "SubagentStart"      => Right(HookEvent.SubagentStart)
-    case "PermissionRequest"  => Right(HookEvent.PermissionRequest)
-    case other                => Left(s"Unknown hook event: $other")
-  }
+  // HookEvent encoder/decoder provided by its WireEnum companion — import via types.*
 
   private def decodeBase(c: HCursor): Decoder.Result[BaseHookFields] =
     for
       sessionId      <- c.downField("session_id").as[String]
       transcriptPath <- c.downField("transcript_path").as[String]
       cwd            <- c.downField("cwd").as[String]
-      permissionMode <- c.downField("permission_mode").as[Option[String]]
+      permissionMode <- c.downField("permission_mode").as[Option[PermissionMode]]
     yield BaseHookFields(sessionId, transcriptPath, cwd, permissionMode)
 
   given Decoder[HookInput] = Decoder.instance { c =>
@@ -153,8 +128,8 @@ object HookCodecs:
   private def encodeHookSpecificOutput(hso: HookSpecificOutput): Json = hso match
     case HookSpecificOutput.PreToolUse(o) =>
       val fields = List.newBuilder[(String, Json)]
-      fields += ("hookEventName" -> "PreToolUse".asJson)
-      o.permissionDecision.foreach(v => fields += ("permissionDecision" -> v.asJson))
+      fields += ("hookEventName" -> HookEvent.PreToolUse.wireValue.asJson)
+      o.permissionDecision.foreach(v => fields += ("permissionDecision" -> v.wireValue.asJson))
       o.permissionDecisionReason.foreach(v => fields += ("permissionDecisionReason" -> v.asJson))
       o.updatedInput.foreach(v => fields += ("updatedInput" -> v.asJson))
       o.additionalContext.foreach(v => fields += ("additionalContext" -> v.asJson))
@@ -162,37 +137,37 @@ object HookCodecs:
 
     case HookSpecificOutput.PostToolUse(o) =>
       val fields = List.newBuilder[(String, Json)]
-      fields += ("hookEventName" -> "PostToolUse".asJson)
+      fields += ("hookEventName" -> HookEvent.PostToolUse.wireValue.asJson)
       o.additionalContext.foreach(v => fields += ("additionalContext" -> v.asJson))
       o.updatedMCPToolOutput.foreach(v => fields += ("updatedMCPToolOutput" -> v))
       Json.fromFields(fields.result())
 
     case HookSpecificOutput.PostToolUseFailure(o) =>
       val fields = List.newBuilder[(String, Json)]
-      fields += ("hookEventName" -> "PostToolUseFailure".asJson)
+      fields += ("hookEventName" -> HookEvent.PostToolUseFailure.wireValue.asJson)
       o.additionalContext.foreach(v => fields += ("additionalContext" -> v.asJson))
       Json.fromFields(fields.result())
 
     case HookSpecificOutput.UserPromptSubmit(o) =>
       val fields = List.newBuilder[(String, Json)]
-      fields += ("hookEventName" -> "UserPromptSubmit".asJson)
+      fields += ("hookEventName" -> HookEvent.UserPromptSubmit.wireValue.asJson)
       o.additionalContext.foreach(v => fields += ("additionalContext" -> v.asJson))
       Json.fromFields(fields.result())
 
     case HookSpecificOutput.Notification(o) =>
       val fields = List.newBuilder[(String, Json)]
-      fields += ("hookEventName" -> "Notification".asJson)
+      fields += ("hookEventName" -> HookEvent.Notification.wireValue.asJson)
       o.additionalContext.foreach(v => fields += ("additionalContext" -> v.asJson))
       Json.fromFields(fields.result())
 
     case HookSpecificOutput.SubagentStart(o) =>
       val fields = List.newBuilder[(String, Json)]
-      fields += ("hookEventName" -> "SubagentStart".asJson)
+      fields += ("hookEventName" -> HookEvent.SubagentStart.wireValue.asJson)
       o.additionalContext.foreach(v => fields += ("additionalContext" -> v.asJson))
       Json.fromFields(fields.result())
 
     case HookSpecificOutput.PermissionRequest(o) =>
       Json.obj(
-        "hookEventName" -> "PermissionRequest".asJson,
+        "hookEventName" -> HookEvent.PermissionRequest.wireValue.asJson,
         "decision"      -> o.decision.asJson,
       )

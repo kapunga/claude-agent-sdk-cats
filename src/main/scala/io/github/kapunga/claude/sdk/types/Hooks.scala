@@ -2,19 +2,36 @@ package io.github.kapunga.claude.sdk.types
 
 import cats.effect.IO
 import io.circe.{Json, JsonObject}
+import io.github.kapunga.claude.sdk.codec.WireEnum
 
 /** Hook event types. */
-enum HookEvent:
-  case PreToolUse, PostToolUse, PostToolUseFailure, UserPromptSubmit
-  case Stop, SubagentStop, PreCompact, Notification, SubagentStart
-  case PermissionRequest
+enum HookEvent(val wireValue: String) extends WireEnum:
+  case PreToolUse         extends HookEvent("PreToolUse")
+  case PostToolUse        extends HookEvent("PostToolUse")
+  case PostToolUseFailure extends HookEvent("PostToolUseFailure")
+  case UserPromptSubmit   extends HookEvent("UserPromptSubmit")
+  case Stop               extends HookEvent("Stop")
+  case SubagentStop       extends HookEvent("SubagentStop")
+  case PreCompact         extends HookEvent("PreCompact")
+  case Notification       extends HookEvent("Notification")
+  case SubagentStart      extends HookEvent("SubagentStart")
+  case PermissionRequest  extends HookEvent("PermissionRequest")
+
+object HookEvent extends WireEnum.Companion[HookEvent](HookEvent.values)
+
+/** Permission decision for PreToolUse hooks. */
+enum PermissionDecision(val wireValue: String) extends WireEnum:
+  case Allow extends PermissionDecision("allow")
+  case Deny  extends PermissionDecision("deny")
+
+object PermissionDecision extends WireEnum.Companion[PermissionDecision](PermissionDecision.values)
 
 /** Base fields present across many hook events. */
 final case class BaseHookFields(
     sessionId: String,
     transcriptPath: String,
     cwd: String,
-    permissionMode: Option[String] = None,
+    permissionMode: Option[PermissionMode] = None,
 )
 
 /** Strongly-typed hook input variants discriminated by hook event name. */
@@ -93,7 +110,7 @@ final case class PermissionRequestHookInput(
 
 /** Hook-specific output for PreToolUse events. */
 final case class PreToolUseHookSpecificOutput(
-    permissionDecision: Option[String] = None,
+    permissionDecision: Option[PermissionDecision] = None,
     permissionDecisionReason: Option[String] = None,
     updatedInput: Option[JsonObject] = None,
     additionalContext: Option[String] = None,

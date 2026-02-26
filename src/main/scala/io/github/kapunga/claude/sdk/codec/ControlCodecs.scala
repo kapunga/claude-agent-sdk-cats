@@ -28,7 +28,7 @@ object ControlCodecs:
             agents <- reqC.downField("agents").as[Option[JsonObject]]
           yield SDKControlInitializeRequest(hooks, agents)
         case "set_permission_mode" =>
-          reqC.downField("mode").as[String].map(SDKControlSetPermissionModeRequest(_))
+          reqC.downField("mode").as[PermissionMode].map(SDKControlSetPermissionModeRequest(_))
         case "hook_callback" =>
           for
             callbackId <- reqC.downField("callback_id").as[String]

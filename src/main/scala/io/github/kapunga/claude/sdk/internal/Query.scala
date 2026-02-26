@@ -8,7 +8,6 @@ import io.circe.{Json, JsonObject}
 import io.circe.syntax.*
 import io.github.kapunga.claude.sdk.codec.ControlCodecs
 import io.github.kapunga.claude.sdk.codec.ControlCodecs.given
-import io.github.kapunga.claude.sdk.codec.{HookCodecs, PermissionCodecs}
 import io.github.kapunga.claude.sdk.codec.HookCodecs.given
 import io.github.kapunga.claude.sdk.codec.PermissionCodecs.given
 import io.github.kapunga.claude.sdk.errors.*
@@ -97,9 +96,9 @@ final class Query private (
     sendControlRequest(JsonObject("subtype" -> "interrupt".asJson), 60.seconds).void
 
   /** Change permission mode. */
-  def setPermissionMode(mode: String): IO[Unit] =
+  def setPermissionMode(mode: PermissionMode): IO[Unit] =
     sendControlRequest(
-      JsonObject("subtype" -> "set_permission_mode".asJson, "mode" -> mode.asJson),
+      JsonObject("subtype" -> "set_permission_mode".asJson, "mode" -> mode.wireValue.asJson),
       60.seconds,
     ).void
 
@@ -329,18 +328,6 @@ object Query:
       hookCallbacksRef: Ref[IO, Map[String, HookCallback]],
   ): IO[Map[String, List[HookMatcherInternal]]] =
     hooks.toList.traverse { case (event, matchers) =>
-      val eventName = event match
-        case HookEvent.PreToolUse         => "PreToolUse"
-        case HookEvent.PostToolUse        => "PostToolUse"
-        case HookEvent.PostToolUseFailure => "PostToolUseFailure"
-        case HookEvent.UserPromptSubmit   => "UserPromptSubmit"
-        case HookEvent.Stop               => "Stop"
-        case HookEvent.SubagentStop       => "SubagentStop"
-        case HookEvent.PreCompact         => "PreCompact"
-        case HookEvent.Notification       => "Notification"
-        case HookEvent.SubagentStart      => "SubagentStart"
-        case HookEvent.PermissionRequest  => "PermissionRequest"
-
       matchers.traverse { matcher =>
         matcher.hooks.traverse { callback =>
           for
@@ -352,5 +339,5 @@ object Query:
         }.map { ids =>
           HookMatcherInternal(matcher.matcher, ids, matcher.timeout)
         }
-      }.map(eventName -> _)
+      }.map(event.wireValue -> _)
     }.map(_.toMap)

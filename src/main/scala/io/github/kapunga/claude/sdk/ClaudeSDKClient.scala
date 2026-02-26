@@ -35,7 +35,7 @@ trait ClaudeSDKClient:
   def interrupt: IO[Unit]
 
   /** Change permission mode during conversation. */
-  def setPermissionMode(mode: String): IO[Unit]
+  def setPermissionMode(mode: PermissionMode): IO[Unit]
 
   /** Change the AI model during conversation. */
   def setModel(model: Option[String] = None): IO[Unit]
@@ -138,7 +138,7 @@ object ClaudeSDKClient:
       }
 
     def interrupt: IO[Unit] = queryInst.interrupt
-    def setPermissionMode(mode: String): IO[Unit] = queryInst.setPermissionMode(mode)
+    def setPermissionMode(mode: PermissionMode): IO[Unit] = queryInst.setPermissionMode(mode)
     def setModel(model: Option[String]): IO[Unit] = queryInst.setModel(model)
     def rewindFiles(userMessageId: String): IO[Unit] = queryInst.rewindFiles(userMessageId)
     def getMcpStatus: IO[JsonObject] = queryInst.getMcpStatus
