@@ -1,23 +1,26 @@
 package io.github.kapunga.claude.sdk
 
-import cats.effect.{IO, Ref, Resource}
 import cats.effect.std.Supervisor
+import cats.effect.{IO, Ref, Resource}
 import cats.syntax.all.*
+
 import fs2.Stream
-import io.circe.{Json, JsonObject}
+
 import io.circe.syntax.*
-import io.github.kapunga.claude.sdk.internal.{Query, QueryConfig}
-import io.github.kapunga.claude.sdk.internal.MessageParser
+import io.circe.{Json, JsonObject}
+
+import io.github.kapunga.claude.sdk.internal.{MessageParser, Query, QueryConfig}
 import io.github.kapunga.claude.sdk.transport.{SubprocessCLITransport, Transport}
 import io.github.kapunga.claude.sdk.types.*
 
-/** Client for bidirectional, interactive conversations with Claude Code.
-  *
-  * This client provides full control over the conversation flow with support
-  * for streaming, interrupts, and dynamic message sending.
-  *
-  * Use `ClaudeSDKClient.resource` to create an instance with proper lifecycle management.
-  */
+/**
+ * Client for bidirectional, interactive conversations with Claude Code.
+ *
+ * This client provides full control over the conversation flow with support
+ * for streaming, interrupts, and dynamic message sending.
+ *
+ * Use `ClaudeSDKClient.resource` to create an instance with proper lifecycle management.
+ */
 trait ClaudeSDKClient:
   /** Send a query (string prompt or message stream). */
   def query(prompt: String, sessionId: String = "default"): IO[Unit]
@@ -51,13 +54,14 @@ trait ClaudeSDKClient:
 
 object ClaudeSDKClient:
 
-  /** Create a ClaudeSDKClient as a Resource with proper lifecycle management.
-    *
-    * The client connects on acquisition and disconnects on release.
-    */
+  /**
+   * Create a ClaudeSDKClient as a Resource with proper lifecycle management.
+   *
+   * The client connects on acquisition and disconnects on release.
+   */
   def resource(
-      options: ClaudeAgentOptions = ClaudeAgentOptions(),
-      customTransport: Option[Transport] = None,
+    options: ClaudeAgentOptions = ClaudeAgentOptions(),
+    customTransport: Option[Transport] = None,
   ): Resource[IO, ClaudeSDKClient] =
     for
       configuredOptions <- Resource.eval(IO {
@@ -73,12 +77,10 @@ object ClaudeSDKClient:
       })
       transport <- customTransport match
         case Some(t) => Resource.pure[IO, Transport](t)
-        case None    => SubprocessCLITransport.resource(configuredOptions)
+        case None => SubprocessCLITransport.resource(configuredOptions)
       hookCallbacksRef <- Resource.eval(Ref.of[IO, Map[String, HookCallback]](Map.empty))
       internalHooks <- Resource.eval(
-        configuredOptions.hooks.traverse(h =>
-          Query.convertHooks(h, hookCallbacksRef)
-        )
+        configuredOptions.hooks.traverse(h => Query.convertHooks(h, hookCallbacksRef))
       )
       agentsJson = configuredOptions.agents.map { agents =>
         agents.map { case (name, defn) =>
@@ -99,34 +101,40 @@ object ClaudeSDKClient:
       // Start processing messages from transport in background via Supervisor
       sup <- Supervisor[IO](await = false)
       _ <- Resource.eval(
-        sup.supervise(
-          transport.readMessages.through(queryInst.processMessages).compile.drain
-        ).void
+        sup
+          .supervise(
+            transport.readMessages.through(queryInst.processMessages).compile.drain
+          )
+          .void
       )
       // Initialize the control protocol
       _ <- Resource.eval(queryInst.initialize)
     yield new ClaudeSDKClientImpl(transport, queryInst)
 
   private class ClaudeSDKClientImpl(
-      transport: Transport,
-      queryInst: Query,
+    transport: Transport,
+    queryInst: Query,
   ) extends ClaudeSDKClient:
 
     def query(prompt: String, sessionId: String): IO[Unit] =
       val message = JsonObject(
-        "type"               -> "user".asJson,
-        "message"            -> Json.obj("role" -> "user".asJson, "content" -> prompt.asJson),
+        "type" -> "user".asJson,
+        "message" -> Json.obj("role" -> "user".asJson, "content" -> prompt.asJson),
         "parent_tool_use_id" -> Json.Null,
-        "session_id"         -> sessionId.asJson,
+        "session_id" -> sessionId.asJson,
       )
       transport.write(Json.fromJsonObject(message).noSpaces + "\n")
 
     def queryStream(messages: Stream[IO, JsonObject], sessionId: String): IO[Unit] =
-      messages.evalMap { msg =>
-        val withSession = if msg.contains("session_id") then msg
-          else msg.add("session_id", sessionId.asJson)
-        transport.write(Json.fromJsonObject(withSession).noSpaces + "\n")
-      }.compile.drain
+      messages
+        .evalMap { msg =>
+          val withSession =
+            if msg.contains("session_id") then msg
+            else msg.add("session_id", sessionId.asJson)
+          transport.write(Json.fromJsonObject(withSession).noSpaces + "\n")
+        }
+        .compile
+        .drain
 
     def receiveMessages: Stream[IO, Message] =
       queryInst.receiveMessages.evalMap(MessageParser.parse).unNone
@@ -134,7 +142,7 @@ object ClaudeSDKClient:
     def receiveResponse: Stream[IO, Message] =
       receiveMessages.takeThrough {
         case _: ResultMessage => true
-        case _                => false
+        case _ => false
       }
 
     def interrupt: IO[Unit] = queryInst.interrupt

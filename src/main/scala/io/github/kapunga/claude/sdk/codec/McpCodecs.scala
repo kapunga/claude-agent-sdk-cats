@@ -2,6 +2,7 @@ package io.github.kapunga.claude.sdk.codec
 
 import io.circe.*
 import io.circe.syntax.*
+
 import io.github.kapunga.claude.sdk.types.*
 
 object McpCodecs:
@@ -35,21 +36,21 @@ object McpCodecs:
     c.downField("type").as[Option[String]].flatMap {
       case Some("sse") =>
         for
-          url     <- c.downField("url").as[String]
+          url <- c.downField("url").as[String]
           headers <- c.downField("headers").as[Option[Map[String, String]]]
         yield McpSSEServerConfig(url, headers)
 
       case Some("http") =>
         for
-          url     <- c.downField("url").as[String]
+          url <- c.downField("url").as[String]
           headers <- c.downField("headers").as[Option[Map[String, String]]]
         yield McpHttpServerConfig(url, headers)
 
       case Some("stdio") | None =>
         for
           command <- c.downField("command").as[String]
-          args    <- c.downField("args").as[Option[List[String]]]
-          env     <- c.downField("env").as[Option[Map[String, String]]]
+          args <- c.downField("args").as[Option[List[String]]]
+          env <- c.downField("env").as[Option[Map[String, String]]]
         yield McpStdioServerConfig(command, args, env)
 
       case Some(other) =>
@@ -59,7 +60,7 @@ object McpCodecs:
 
   given Encoder[SdkMcpTool] = Encoder.instance { t =>
     Json.obj(
-      "name"        -> t.name.asJson,
+      "name" -> t.name.asJson,
       "description" -> t.description.asJson,
       "inputSchema" -> t.inputSchema.asJson,
     )

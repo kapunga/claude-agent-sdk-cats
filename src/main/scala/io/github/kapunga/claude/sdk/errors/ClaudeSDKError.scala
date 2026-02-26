@@ -18,14 +18,17 @@ class CLINotFoundError(message: String, cliPath: Option[String] = None)
     )
 
 object CLINotFoundError:
-  def apply(message: String = "Claude Code not found", cliPath: Option[String] = None): CLINotFoundError =
+  def apply(
+    message: String = "Claude Code not found",
+    cliPath: Option[String] = None,
+  ): CLINotFoundError =
     new CLINotFoundError(message, cliPath)
 
 /** Raised when the CLI process fails. */
 class ProcessError(
-    message: String,
-    val exitCode: Option[Int] = None,
-    val stderr: Option[String] = None,
+  message: String,
+  val exitCode: Option[Int] = None,
+  val stderr: Option[String] = None,
 ) extends ClaudeSDKError({
       val withExit = exitCode.fold(message)(c => s"$message (exit code: $c)")
       stderr.fold(withExit)(s => s"$withExit\nError output: $s")

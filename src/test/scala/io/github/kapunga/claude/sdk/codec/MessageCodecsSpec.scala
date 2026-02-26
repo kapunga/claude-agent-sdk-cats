@@ -1,10 +1,11 @@
 package io.github.kapunga.claude.sdk.codec
 
 import io.circe.*
-import io.circe.syntax.*
 import io.circe.parser.*
-import io.github.kapunga.claude.sdk.types.*
+
 import munit.CatsEffectSuite
+
+import io.github.kapunga.claude.sdk.types.*
 
 class MessageCodecsSpec extends CatsEffectSuite:
 

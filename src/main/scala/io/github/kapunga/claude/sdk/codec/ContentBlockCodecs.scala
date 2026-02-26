@@ -2,17 +2,19 @@ package io.github.kapunga.claude.sdk.codec
 
 import io.circe.*
 import io.circe.syntax.*
+
 import io.github.kapunga.claude.sdk.types.*
 
 object ContentBlockCodecs:
 
   given Encoder[ToolResultContent] = Encoder.instance {
-    case ToolResultContent.Text(v)  => Json.fromString(v)
+    case ToolResultContent.Text(v) => Json.fromString(v)
     case ToolResultContent.Parts(v) => Json.arr(v.map(Json.fromJsonObject)*)
   }
 
   given Decoder[ToolResultContent] = Decoder.instance { c =>
-    c.as[String].map(ToolResultContent.Text(_))
+    c.as[String]
+      .map(ToolResultContent.Text(_))
       .orElse(c.as[List[JsonObject]].map(ToolResultContent.Parts(_)))
   }
 
@@ -20,15 +22,24 @@ object ContentBlockCodecs:
     case TextBlock(text) =>
       Json.obj("type" -> "text".asJson, "text" -> text.asJson)
     case ThinkingBlock(thinking, signature) =>
-      Json.obj("type" -> "thinking".asJson, "thinking" -> thinking.asJson, "signature" -> signature.asJson)
+      Json.obj(
+        "type" -> "thinking".asJson,
+        "thinking" -> thinking.asJson,
+        "signature" -> signature.asJson,
+      )
     case ToolUseBlock(id, name, input) =>
-      Json.obj("type" -> "tool_use".asJson, "id" -> id.asJson, "name" -> name.asJson, "input" -> input.asJson)
+      Json.obj(
+        "type" -> "tool_use".asJson,
+        "id" -> id.asJson,
+        "name" -> name.asJson,
+        "input" -> input.asJson,
+      )
     case ToolResultBlock(toolUseId, content, isError) =>
       Json.obj(
-        "type"        -> "tool_result".asJson,
+        "type" -> "tool_result".asJson,
         "tool_use_id" -> toolUseId.asJson,
-        "content"     -> content.asJson,
-        "is_error"    -> isError.asJson,
+        "content" -> content.asJson,
+        "is_error" -> isError.asJson,
       )
   }
 
@@ -38,20 +49,20 @@ object ContentBlockCodecs:
         c.downField("text").as[String].map(TextBlock(_))
       case "thinking" =>
         for
-          thinking  <- c.downField("thinking").as[String]
+          thinking <- c.downField("thinking").as[String]
           signature <- c.downField("signature").as[String]
         yield ThinkingBlock(thinking, signature)
       case "tool_use" =>
         for
-          id    <- c.downField("id").as[String]
-          name  <- c.downField("name").as[String]
+          id <- c.downField("id").as[String]
+          name <- c.downField("name").as[String]
           input <- c.downField("input").as[JsonObject]
         yield ToolUseBlock(id, name, input)
       case "tool_result" =>
         for
           toolUseId <- c.downField("tool_use_id").as[String]
-          content   <- c.downField("content").as[Option[ToolResultContent]]
-          isError   <- c.downField("is_error").as[Option[Boolean]]
+          content <- c.downField("content").as[Option[ToolResultContent]]
+          isError <- c.downField("is_error").as[Option[Boolean]]
         yield ToolResultBlock(toolUseId, content, isError)
       case other =>
         Left(DecodingFailure(s"Unknown content block type: $other", c.history))

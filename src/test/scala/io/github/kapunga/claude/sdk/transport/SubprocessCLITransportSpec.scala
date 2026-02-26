@@ -1,10 +1,8 @@
 package io.github.kapunga.claude.sdk.transport
 
-import io.circe.*
-import io.circe.parser.*
-import io.github.kapunga.claude.sdk.errors.CLIJSONDecodeError
-import io.github.kapunga.claude.sdk.types.*
 import munit.CatsEffectSuite
+
+import io.github.kapunga.claude.sdk.types.*
 
 class SubprocessCLITransportSpec extends CatsEffectSuite:
 
@@ -20,7 +18,7 @@ class SubprocessCLITransportSpec extends CatsEffectSuite:
 
   test("buildCommand includes system prompt") {
     val options = ClaudeAgentOptions(
-      systemPrompt = Some(SystemPrompt.Text("You are helpful")),
+      systemPrompt = Some(SystemPrompt.Text("You are helpful"))
     )
     val cmd = SubprocessCLITransport.buildCommand("/usr/bin/claude", options)
     assert(cmd.contains("--system-prompt"))
@@ -37,7 +35,7 @@ class SubprocessCLITransportSpec extends CatsEffectSuite:
 
   test("buildCommand includes tools") {
     val options = ClaudeAgentOptions(
-      tools = Some(ToolsConfig.ToolList(List("Bash", "Read"))),
+      tools = Some(ToolsConfig.ToolList(List("Bash", "Read")))
     )
     val cmd = SubprocessCLITransport.buildCommand("/usr/bin/claude", options)
     assert(cmd.contains("--tools"))
@@ -67,7 +65,7 @@ class SubprocessCLITransportSpec extends CatsEffectSuite:
 
   test("buildCommand includes extra args") {
     val options = ClaudeAgentOptions(
-      extraArgs = Map("debug-to-stderr" -> None, "custom-flag" -> Some("value")),
+      extraArgs = Map("debug-to-stderr" -> None, "custom-flag" -> Some("value"))
     )
     val cmd = SubprocessCLITransport.buildCommand("/usr/bin/claude", options)
     assert(cmd.contains("--debug-to-stderr"))
@@ -105,21 +103,33 @@ class SubprocessCLITransportSpec extends CatsEffectSuite:
 
   test("jsonBufferPipe parses complete JSON lines") {
     import cats.effect.IO
-    val input = fs2.Stream.emits(List(
-      """{"type": "assistant", "message": {"content": [], "model": "test"}}""",
-    ))
-    val result = input.through(SubprocessCLITransport.jsonBufferPipe(1024 * 1024)).compile.toList.unsafeRunSync()
+    val input = fs2.Stream.emits(
+      List(
+        """{"type": "assistant", "message": {"content": [], "model": "test"}}"""
+      )
+    )
+    val result = input
+      .through(SubprocessCLITransport.jsonBufferPipe(1024 * 1024))
+      .compile
+      .toList
+      .unsafeRunSync()
     assertEquals(result.length, 1)
     assertEquals(result.head("type").flatMap(_.asString), Some("assistant"))
   }
 
   test("jsonBufferPipe buffers partial JSON") {
     import cats.effect.IO
-    val input = fs2.Stream.emits(List(
-      """{"type": "ass""",
-      """istant", "data": {}}""",
-    ))
-    val result = input.through(SubprocessCLITransport.jsonBufferPipe(1024 * 1024)).compile.toList.unsafeRunSync()
+    val input = fs2.Stream.emits(
+      List(
+        """{"type": "ass""",
+        """istant", "data": {}}""",
+      )
+    )
+    val result = input
+      .through(SubprocessCLITransport.jsonBufferPipe(1024 * 1024))
+      .compile
+      .toList
+      .unsafeRunSync()
     assertEquals(result.length, 1)
     assertEquals(result.head("type").flatMap(_.asString), Some("assistant"))
   }
@@ -127,6 +137,10 @@ class SubprocessCLITransportSpec extends CatsEffectSuite:
   test("jsonBufferPipe skips empty lines") {
     import cats.effect.IO
     val input = fs2.Stream.emits(List("", "  ", """{"ok": true}""", ""))
-    val result = input.through(SubprocessCLITransport.jsonBufferPipe(1024 * 1024)).compile.toList.unsafeRunSync()
+    val result = input
+      .through(SubprocessCLITransport.jsonBufferPipe(1024 * 1024))
+      .compile
+      .toList
+      .unsafeRunSync()
     assertEquals(result.length, 1)
   }

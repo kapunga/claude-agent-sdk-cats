@@ -1,10 +1,12 @@
 package io.github.kapunga.claude.sdk.codec
 
 import io.circe.*
-import io.circe.syntax.*
 import io.circe.parser.*
-import io.github.kapunga.claude.sdk.types.*
+import io.circe.syntax.*
+
 import munit.CatsEffectSuite
+
+import io.github.kapunga.claude.sdk.types.*
 
 class ContentBlockCodecsSpec extends CatsEffectSuite:
 
@@ -24,7 +26,9 @@ class ContentBlockCodecsSpec extends CatsEffectSuite:
   }
 
   test("decode ThinkingBlock") {
-    val json = parse("""{"type": "thinking", "thinking": "Let me think...", "signature": "sig123"}""").toOption.get
+    val json = parse(
+      """{"type": "thinking", "thinking": "Let me think...", "signature": "sig123"}"""
+    ).toOption.get
     val result = json.as[ContentBlock]
     assertEquals(result, Right(ThinkingBlock("Let me think...", "sig123")))
   }
@@ -37,7 +41,9 @@ class ContentBlockCodecsSpec extends CatsEffectSuite:
   }
 
   test("decode ToolUseBlock") {
-    val json = parse("""{"type": "tool_use", "id": "tu1", "name": "Bash", "input": {"command": "ls"}}""").toOption.get
+    val json = parse(
+      """{"type": "tool_use", "id": "tu1", "name": "Bash", "input": {"command": "ls"}}"""
+    ).toOption.get
     val result = json.as[ContentBlock]
     val expected = ToolUseBlock("tu1", "Bash", JsonObject("command" -> "ls".asJson))
     assertEquals(result, Right(expected))
@@ -51,14 +57,17 @@ class ContentBlockCodecsSpec extends CatsEffectSuite:
   }
 
   test("decode ToolResultBlock with string content") {
-    val json = parse("""{"type": "tool_result", "tool_use_id": "tu1", "content": "output text"}""").toOption.get
+    val json = parse(
+      """{"type": "tool_result", "tool_use_id": "tu1", "content": "output text"}"""
+    ).toOption.get
     val result = json.as[ContentBlock]
     val expected = ToolResultBlock("tu1", Some(ToolResultContent.Text("output text")), None)
     assertEquals(result, Right(expected))
   }
 
   test("decode ToolResultBlock with null content") {
-    val json = parse("""{"type": "tool_result", "tool_use_id": "tu1", "is_error": true}""").toOption.get
+    val json =
+      parse("""{"type": "tool_result", "tool_use_id": "tu1", "is_error": true}""").toOption.get
     val result = json.as[ContentBlock]
     val expected = ToolResultBlock("tu1", None, Some(true))
     assertEquals(result, Right(expected))

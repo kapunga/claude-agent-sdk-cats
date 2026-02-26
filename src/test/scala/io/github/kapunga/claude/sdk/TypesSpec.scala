@@ -1,7 +1,8 @@
 package io.github.kapunga.claude.sdk
 
-import io.github.kapunga.claude.sdk.types.*
 import munit.CatsEffectSuite
+
+import io.github.kapunga.claude.sdk.types.*
 
 class TypesSpec extends CatsEffectSuite:
 
@@ -100,7 +101,10 @@ class TypesSpec extends CatsEffectSuite:
       assertEquals(PermissionMode.fromWireValue(mode.wireValue), Some(mode))
     }
     assertEquals(PermissionMode.fromWireValue("default"), Some(PermissionMode.Default))
-    assertEquals(PermissionMode.fromWireValue("bypassPermissions"), Some(PermissionMode.BypassPermissions))
+    assertEquals(
+      PermissionMode.fromWireValue("bypassPermissions"),
+      Some(PermissionMode.BypassPermissions),
+    )
     assertEquals(PermissionMode.fromWireValue("unknown_value"), None)
   }
 
@@ -117,7 +121,10 @@ class TypesSpec extends CatsEffectSuite:
     AssistantMessageError.values.foreach { err =>
       assertEquals(AssistantMessageError.fromWireValue(err.wireValue), Some(err))
     }
-    assertEquals(AssistantMessageError.fromWireValue("rate_limit"), Some(AssistantMessageError.RateLimit))
+    assertEquals(
+      AssistantMessageError.fromWireValue("rate_limit"),
+      Some(AssistantMessageError.RateLimit),
+    )
     assertEquals(AssistantMessageError.fromWireValue("nope"), None)
   }
 

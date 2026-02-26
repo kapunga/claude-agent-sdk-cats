@@ -2,6 +2,7 @@ package io.github.kapunga.claude.sdk.codec
 
 import io.circe.*
 import io.circe.syntax.*
+
 import io.github.kapunga.claude.sdk.types.*
 
 object PermissionCodecs:
@@ -11,7 +12,7 @@ object PermissionCodecs:
 
   given Encoder[PermissionRuleValue] = Encoder.instance { r =>
     Json.obj(
-      "toolName"    -> r.toolName.asJson,
+      "toolName" -> r.toolName.asJson,
       "ruleContent" -> r.ruleContent.asJson,
     )
   }
@@ -19,10 +20,13 @@ object PermissionCodecs:
   given Encoder[PermissionUpdate] = Encoder.instance { p =>
     val fields = List.newBuilder[(String, Json)]
     fields += ("type" -> Encoder[PermissionUpdateType].apply(p.updateType))
-    p.destination.foreach(d => fields += ("destination" -> Encoder[PermissionUpdateDestination].apply(d)))
+    p.destination.foreach(d =>
+      fields += ("destination" -> Encoder[PermissionUpdateDestination].apply(d))
+    )
 
     p.updateType match
-      case PermissionUpdateType.AddRules | PermissionUpdateType.ReplaceRules | PermissionUpdateType.RemoveRules =>
+      case PermissionUpdateType.AddRules | PermissionUpdateType.ReplaceRules |
+          PermissionUpdateType.RemoveRules =>
         p.rules.foreach(r => fields += ("rules" -> r.asJson))
         p.behavior.foreach(b => fields += ("behavior" -> Encoder[PermissionBehavior].apply(b)))
       case PermissionUpdateType.SetMode =>
@@ -43,7 +47,7 @@ object PermissionCodecs:
     case PermissionResult.Deny(r) =>
       val fields = List.newBuilder[(String, Json)]
       fields += ("behavior" -> "deny".asJson)
-      fields += ("message"  -> r.message.asJson)
+      fields += ("message" -> r.message.asJson)
       if r.interrupt then fields += ("interrupt" -> Json.True)
       Json.fromFields(fields.result())
   }

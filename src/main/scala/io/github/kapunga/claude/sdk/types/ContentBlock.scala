@@ -16,9 +16,9 @@ final case class ToolUseBlock(id: String, name: String, input: JsonObject) exten
 
 /** Tool result content block representing the output of a tool invocation. */
 final case class ToolResultBlock(
-    toolUseId: String,
-    content: Option[ToolResultContent] = None,
-    isError: Option[Boolean] = None,
+  toolUseId: String,
+  content: Option[ToolResultContent] = None,
+  isError: Option[Boolean] = None,
 ) extends ContentBlock
 
 /** Content of a tool result - either a simple string or structured content parts. */

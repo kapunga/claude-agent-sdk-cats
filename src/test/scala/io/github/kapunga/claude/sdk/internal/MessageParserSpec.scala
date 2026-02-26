@@ -1,21 +1,22 @@
 package io.github.kapunga.claude.sdk.internal
 
-import cats.effect.IO
 import io.circe.*
 import io.circe.syntax.*
+
+import munit.CatsEffectSuite
+
 import io.github.kapunga.claude.sdk.errors.MessageParseError
 import io.github.kapunga.claude.sdk.types.*
-import munit.CatsEffectSuite
 
 class MessageParserSpec extends CatsEffectSuite:
 
   test("parse user message with string content") {
     val data = JsonObject(
-      "type"               -> "user".asJson,
-      "message"            -> Json.obj("content" -> "Hello".asJson),
-      "uuid"               -> "abc".asJson,
+      "type" -> "user".asJson,
+      "message" -> Json.obj("content" -> "Hello".asJson),
+      "uuid" -> "abc".asJson,
       "parent_tool_use_id" -> Json.Null,
-      "tool_use_result"    -> Json.Null,
+      "tool_use_result" -> Json.Null,
     )
     MessageParser.parse(data).map {
       case Some(msg: UserMessage) =>
@@ -27,10 +28,10 @@ class MessageParserSpec extends CatsEffectSuite:
 
   test("parse assistant message") {
     val data = JsonObject(
-      "type"    -> "assistant".asJson,
+      "type" -> "assistant".asJson,
       "message" -> Json.obj(
         "content" -> Json.arr(Json.obj("type" -> "text".asJson, "text" -> "Hi".asJson)),
-        "model"   -> "claude-sonnet-4-5-20250929".asJson,
+        "model" -> "claude-sonnet-4-5-20250929".asJson,
       ),
       "parent_tool_use_id" -> Json.Null,
     )
@@ -44,14 +45,14 @@ class MessageParserSpec extends CatsEffectSuite:
 
   test("parse result message") {
     val data = JsonObject(
-      "type"            -> "result".asJson,
-      "subtype"         -> "success".asJson,
-      "duration_ms"     -> 100.asJson,
+      "type" -> "result".asJson,
+      "subtype" -> "success".asJson,
+      "duration_ms" -> 100.asJson,
       "duration_api_ms" -> 80.asJson,
-      "is_error"        -> false.asJson,
-      "num_turns"       -> 1.asJson,
-      "session_id"      -> "sess-1".asJson,
-      "total_cost_usd"  -> 0.01.asJson,
+      "is_error" -> false.asJson,
+      "num_turns" -> 1.asJson,
+      "session_id" -> "sess-1".asJson,
+      "total_cost_usd" -> 0.01.asJson,
     )
     MessageParser.parse(data).map {
       case Some(msg: ResultMessage) =>
@@ -81,7 +82,7 @@ class MessageParserSpec extends CatsEffectSuite:
 
   test("parse malformed known message type raises error") {
     val data = JsonObject(
-      "type" -> "result".asJson,
+      "type" -> "result".asJson
       // Missing required fields
     )
     MessageParser.parse(data).attempt.map { result =>

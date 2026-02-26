@@ -12,6 +12,8 @@ lazy val commonSettings = Seq(
     "-unchecked",
     "-Wunused:all",
   ),
+  semanticdbEnabled := true,
+  semanticdbVersion := scalafixSemanticdb.revision,
 )
 
 lazy val root = (project in file("."))

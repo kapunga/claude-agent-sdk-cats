@@ -1,12 +1,10 @@
 package io.github.kapunga.claude.sdk
 
-import cats.effect.{IO, Ref}
-import fs2.Stream
-import io.circe.{Json, JsonObject}
-import io.circe.syntax.*
-import io.github.kapunga.claude.sdk.transport.Transport
-import io.github.kapunga.claude.sdk.types.*
+import io.circe.JsonObject
+
 import munit.CatsEffectSuite
+
+import io.github.kapunga.claude.sdk.types.*
 
 class ClaudeSDKClientSpec extends CatsEffectSuite:
 
@@ -42,7 +40,7 @@ class ClaudeSDKClientSpec extends CatsEffectSuite:
 
     allow match
       case PermissionResult.Allow(r) => assert(r.updatedInput.isEmpty)
-      case _                         => fail("Expected Allow")
+      case _ => fail("Expected Allow")
 
     deny match
       case PermissionResult.Deny(r) =>

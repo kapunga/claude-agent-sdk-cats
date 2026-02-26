@@ -1,14 +1,17 @@
 package io.github.kapunga.claude.sdk.transport
 
+import java.nio.file.{Files, Path, Paths}
+
 import cats.effect.{IO, Ref, Resource}
-import fs2.{Pipe, Stream}
+
 import fs2.io.process.{ProcessBuilder, Processes}
+import fs2.{Pipe, Stream}
+
 import io.circe.{Json, JsonObject, parser}
+
+import io.github.kapunga.claude.sdk.codec.{McpCodecs, OptionsCodecs}
 import io.github.kapunga.claude.sdk.errors.*
 import io.github.kapunga.claude.sdk.types.*
-import io.github.kapunga.claude.sdk.codec.{McpCodecs, OptionsCodecs}
-
-import java.nio.file.{Files, Path, Paths}
 
 private[sdk] object SubprocessCLITransport:
 
@@ -20,12 +23,13 @@ private[sdk] object SubprocessCLITransport:
   def findCli(cliPath: Option[String]): IO[String] =
     cliPath match
       case Some(path) => IO.pure(path)
-      case None       => findCliOnPath
+      case None => findCliOnPath
 
   private def findCliOnPath: IO[String] =
     IO.blocking {
       // Check PATH via which-style lookup
-      val pathDirs = Option(System.getenv("PATH")).getOrElse("").split(java.io.File.pathSeparatorChar)
+      val pathDirs =
+        Option(System.getenv("PATH")).getOrElse("").split(java.io.File.pathSeparatorChar)
       val fromPath = pathDirs.map(d => Paths.get(d, "claude")).find(p => Files.isExecutable(p))
 
       fromPath match
@@ -42,12 +46,13 @@ private[sdk] object SubprocessCLITransport:
           )
           locations.find(p => Files.isExecutable(Paths.get(p))) match
             case Some(p) => p
-            case None    => throw CLINotFoundError(
-              "Claude Code not found. Install with:\n" +
-              "  npm install -g @anthropic-ai/claude-code\n" +
-              "\nOr provide the path via ClaudeAgentOptions:\n" +
-              "  ClaudeAgentOptions(cliPath = Some(\"/path/to/claude\"))"
-            )
+            case None =>
+              throw CLINotFoundError(
+                "Claude Code not found. Install with:\n" +
+                  "  npm install -g @anthropic-ai/claude-code\n" +
+                  "\nOr provide the path via ClaudeAgentOptions:\n" +
+                  "  ClaudeAgentOptions(cliPath = Some(\"/path/to/claude\"))"
+              )
     }
 
   /** Build the CLI command line arguments. */
@@ -91,8 +96,7 @@ private[sdk] object SubprocessCLITransport:
     options.model.foreach(m => cmd += "--model" += m)
     options.fallbackModel.foreach(m => cmd += "--fallback-model" += m)
 
-    if options.betas.nonEmpty then
-      cmd += "--betas" += options.betas.map(_.wireValue).mkString(",")
+    if options.betas.nonEmpty then cmd += "--betas" += options.betas.map(_.wireValue).mkString(",")
 
     options.permissionPromptToolName.foreach(n => cmd += "--permission-prompt-tool" += n)
     options.permissionMode.foreach { pm =>
@@ -136,7 +140,7 @@ private[sdk] object SubprocessCLITransport:
     // Extra args
     options.extraArgs.foreach { case (flag, value) =>
       value match
-        case None    => cmd += s"--$flag"
+        case None => cmd += s"--$flag"
         case Some(v) => cmd += s"--$flag" += v
     }
 
@@ -179,12 +183,14 @@ private[sdk] object SubprocessCLITransport:
     else if hasSettings && !hasSandbox then options.settings
     else
       // Merge sandbox into settings
-      val settingsObj: JsonObject = options.settings.flatMap { s =>
-        val trimmed = s.trim
-        if trimmed.startsWith("{") && trimmed.endsWith("}") then
-          parser.parse(trimmed).toOption.flatMap(_.asObject)
-        else None
-      }.getOrElse(JsonObject.empty)
+      val settingsObj: JsonObject = options.settings
+        .flatMap { s =>
+          val trimmed = s.trim
+          if trimmed.startsWith("{") && trimmed.endsWith("}") then
+            parser.parse(trimmed).toOption.flatMap(_.asObject)
+          else None
+        }
+        .getOrElse(JsonObject.empty)
 
       val withSandbox = options.sandbox.fold(settingsObj) { sb =>
         settingsObj.add("sandbox", io.circe.Encoder[SandboxSettings].apply(sb))
@@ -195,8 +201,8 @@ private[sdk] object SubprocessCLITransport:
   def resource(options: ClaudeAgentOptions): Resource[IO, Transport] =
     for
       cliPath <- Resource.eval(findCli(options.cliPath))
-      cmd      = buildCommand(cliPath, options)
-      ready   <- Resource.eval(Ref.of[IO, Boolean](false))
+      cmd = buildCommand(cliPath, options)
+      ready <- Resource.eval(Ref.of[IO, Boolean](false))
       transport <- Resource.make(
         IO.pure(new SubprocessCLITransportImpl(cmd, options, ready))
       )(_ => IO.unit) // Process cleanup handled by fs2
@@ -214,22 +220,24 @@ private[sdk] object SubprocessCLITransport:
             if newBuffer.length > maxBufferSize then
               throw new CLIJSONDecodeError(
                 s"JSON message exceeded maximum buffer size of $maxBufferSize bytes",
-                new RuntimeException(s"Buffer size ${newBuffer.length} exceeds limit $maxBufferSize"),
+                new RuntimeException(
+                  s"Buffer size ${newBuffer.length} exceeds limit $maxBufferSize"
+                ),
               )
             parser.parse(newBuffer) match
               case Right(json) =>
                 json.asObject match
                   case Some(obj) => ("", Some(obj))
-                  case None      => (newBuffer, None)
+                  case None => (newBuffer, None)
               case Left(_) =>
                 (newBuffer, None)
         }
         .collect { case (_, Some(obj)) => obj }
 
 private class SubprocessCLITransportImpl(
-    cmd: List[String],
-    options: ClaudeAgentOptions,
-    readyRef: Ref[IO, Boolean],
+  cmd: List[String],
+  options: ClaudeAgentOptions,
+  readyRef: Ref[IO, Boolean],
 ) extends Transport:
 
   private val maxBufferSize =
@@ -245,7 +253,7 @@ private class SubprocessCLITransportImpl(
       case true =>
         stdinWrite match
           case Some(w) => w(data)
-          case None    => IO.raiseError(new CLIConnectionError("stdin not available"))
+          case None => IO.raiseError(new CLIConnectionError("stdin not available"))
     }
 
   def readMessages: Stream[IO, JsonObject] =
@@ -256,7 +264,8 @@ private class SubprocessCLITransportImpl(
       ) ++ options.env
 
       val withCheckpoint =
-        if options.enableFileCheckpointing then base + ("CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING" -> "true")
+        if options.enableFileCheckpointing then
+          base + ("CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING" -> "true")
         else base
 
       options.cwd.fold(withCheckpoint)(cwd => withCheckpoint + ("PWD" -> cwd))
@@ -283,9 +292,9 @@ private class SubprocessCLITransportImpl(
         }
         stdinClose = Some(IO.unit) // Process resource handles cleanup
       }) ++
-      Stream.exec(readyRef.set(true)) ++
-      stdoutStream ++
-      Stream.exec(readyRef.set(false))
+        Stream.exec(readyRef.set(true)) ++
+        stdoutStream ++
+        Stream.exec(readyRef.set(false))
     }
 
   def endInput: IO[Unit] =
