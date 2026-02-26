@@ -1,31 +1,21 @@
 package io.github.kapunga.claude.sdk
 
+import cats.effect.IO
+
 import io.circe.syntax.*
-import io.circe.{Json, JsonObject}
+import io.circe.{Decoder, JsonObject}
 
-import io.github.kapunga.claude.sdk.codec.WireEnum
+import sttp.apispec.{Schema => ASchema}
+import sttp.apispec.circe.*
+import sttp.tapir.{Schema => TSchema}
+import sttp.tapir.docs.apispec.schema.TapirSchemaToJsonSchema
+
 import io.github.kapunga.claude.sdk.types.{McpToolHandler, SdkMcpTool}
-
-/** JSON Schema types for MCP tool parameters. */
-enum JsonSchemaType(val wireValue: String) extends WireEnum:
-  case StringType extends JsonSchemaType("string")
-  case IntType extends JsonSchemaType("integer")
-  case NumberType extends JsonSchemaType("number")
-  case BooleanType extends JsonSchemaType("boolean")
-
-object JsonSchemaType extends WireEnum.Companion[JsonSchemaType](JsonSchemaType.values)
 
 /** Builder for creating SDK MCP tools. */
 object McpTools:
 
-  /**
-   * Create an SdkMcpTool from a handler function and schema.
-   *
-   * @param name Unique identifier for the tool
-   * @param description Human-readable description of what the tool does
-   * @param inputSchema JSON Schema describing the tool's input parameters
-   * @param handler The function that executes the tool
-   */
+  /** Create an SdkMcpTool with an explicit JSON schema and raw handler. */
   def tool(
     name: String,
     description: String,
@@ -34,15 +24,32 @@ object McpTools:
   ): SdkMcpTool =
     SdkMcpTool(name, description, inputSchema, handler)
 
-  /** Create a simple JSON Schema for a tool with typed parameters. */
-  def simpleSchema(params: (String, JsonSchemaType)*): JsonObject =
-    val properties = JsonObject.fromIterable(
-      params.map { case (name, schemaType) =>
-        name -> Json.obj("type" -> schemaType.wireValue.asJson)
-      }
+  /** Create an SdkMcpTool with auto-derived JSON Schema and typed input decoding.
+   *
+   * Requires `TSchema[A]` (from `import sttp.tapir.generic.auto.*` or
+   * `TSchema.derived`) and `Decoder[A]` (from circe derivation).
+   */
+  def tool[A: TSchema: Decoder](
+    name: String,
+    description: String,
+    handler: A => IO[JsonObject],
+  ): SdkMcpTool =
+    val inputSchema = schemaFor[A]
+    val rawHandler: McpToolHandler = { args =>
+      args.toJson.as[A] match
+        case Right(decoded) => handler(decoded)
+        case Left(err) =>
+          IO.raiseError(new IllegalArgumentException(s"Failed to decode tool args: ${err.message}"))
+    }
+    SdkMcpTool(name, description, inputSchema, rawHandler)
+
+  private def schemaFor[A: TSchema]: JsonObject =
+    val apiSchema: ASchema = TapirSchemaToJsonSchema(
+      summon[TSchema[A]],
+      markOptionsAsNullable = true,
     )
-    JsonObject(
-      "type" -> "object".asJson,
-      "properties" -> Json.fromJsonObject(properties),
-      "required" -> Json.arr(params.map(_._1.asJson)*),
-    )
+    // TapirSchemaToJsonSchema adds $schema and title metadata that MCP doesn't need.
+    // Strip them for a clean tool input schema.
+    apiSchema.asJson.deepDropNullValues.asObject
+      .map(_.remove("$schema").remove("title"))
+      .getOrElse(JsonObject.empty)

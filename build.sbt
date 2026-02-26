@@ -1,8 +1,10 @@
-val Scala3Version  = "3.3.4"
-val CatsEffectVersion = "3.5.7"
-val Fs2Version     = "3.11.0"
-val CirceVersion   = "0.14.10"
-val MunitCEVersion = "2.0.0"
+val Scala3Version      = "3.3.4"
+val CatsEffectVersion  = "3.5.7"
+val Fs2Version         = "3.11.0"
+val CirceVersion       = "0.14.10"
+val TapirVersion       = "1.11.23"
+val SttpApispecVersion = "0.11.10"
+val MunitCEVersion     = "2.0.0"
 
 lazy val commonSettings = Seq(
   scalaVersion := Scala3Version,
@@ -26,10 +28,13 @@ lazy val root = (project in file("."))
       "org.typelevel" %% "cats-effect"        % CatsEffectVersion,
       "co.fs2"        %% "fs2-core"           % Fs2Version,
       "co.fs2"        %% "fs2-io"             % Fs2Version,
-      "io.circe"      %% "circe-core"         % CirceVersion,
-      "io.circe"      %% "circe-parser"       % CirceVersion,
-      "org.typelevel" %% "munit-cats-effect"  % MunitCEVersion % Test,
-      "io.circe"      %% "circe-literal"      % CirceVersion   % Test,
+      "io.circe"                      %% "circe-core"         % CirceVersion,
+      "io.circe"                      %% "circe-parser"       % CirceVersion,
+      "com.softwaremill.sttp.tapir"   %% "tapir-core"         % TapirVersion,
+      "com.softwaremill.sttp.tapir"   %% "tapir-apispec-docs" % TapirVersion,
+      "com.softwaremill.sttp.apispec" %% "jsonschema-circe"   % SttpApispecVersion,
+      "org.typelevel"                 %% "munit-cats-effect"  % MunitCEVersion % Test,
+      "io.circe"                      %% "circe-literal"      % CirceVersion   % Test,
     ),
   )
 

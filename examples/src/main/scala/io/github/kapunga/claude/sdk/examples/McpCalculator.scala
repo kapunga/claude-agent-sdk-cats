@@ -3,23 +3,25 @@ package io.github.kapunga.claude.sdk.examples
 import cats.effect.{IO, IOApp}
 
 import io.circe.syntax.*
-import io.circe.{Json, JsonObject}
+import io.circe.{Decoder, Json, JsonObject}
 
-import io.github.kapunga.claude.sdk.{JsonSchemaType, McpTools}
+import sttp.tapir.generic.auto.*
+import sttp.tapir.Schema as TSchema
+
+import io.github.kapunga.claude.sdk.McpTools
+
+final case class BinaryOpInput(a: Double, b: Double) derives Decoder
 
 object McpCalculator extends IOApp.Simple:
 
+  // TSchema[BinaryOpInput] is derived automatically via sttp.tapir.generic.auto.*
+
   def run: IO[Unit] =
-    // Define calculator tools
-    val addTool = McpTools.tool(
+    val addTool = McpTools.tool[BinaryOpInput](
       name = "add",
       description = "Add two numbers",
-      inputSchema =
-        McpTools.simpleSchema("a" -> JsonSchemaType.NumberType, "b" -> JsonSchemaType.NumberType),
-      handler = { args =>
-        val a = args("a").flatMap(_.asNumber).flatMap(n => Some(n.toDouble)).getOrElse(0.0)
-        val b = args("b").flatMap(_.asNumber).flatMap(n => Some(n.toDouble)).getOrElse(0.0)
-        val result = a + b
+      handler = { input =>
+        val result = input.a + input.b
         IO.pure(
           JsonObject(
             "content" -> Json.arr(
@@ -30,15 +32,11 @@ object McpCalculator extends IOApp.Simple:
       },
     )
 
-    val multiplyTool = McpTools.tool(
+    val multiplyTool = McpTools.tool[BinaryOpInput](
       name = "multiply",
       description = "Multiply two numbers",
-      inputSchema =
-        McpTools.simpleSchema("a" -> JsonSchemaType.NumberType, "b" -> JsonSchemaType.NumberType),
-      handler = { args =>
-        val a = args("a").flatMap(_.asNumber).flatMap(n => Some(n.toDouble)).getOrElse(0.0)
-        val b = args("b").flatMap(_.asNumber).flatMap(n => Some(n.toDouble)).getOrElse(0.0)
-        val result = a * b
+      handler = { input =>
+        val result = input.a * input.b
         IO.pure(
           JsonObject(
             "content" -> Json.arr(
