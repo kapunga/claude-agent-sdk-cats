@@ -10,12 +10,7 @@ object PermissionCodecs:
   // PermissionMode, PermissionBehavior, PermissionUpdateDestination, PermissionUpdateType
   // codecs are provided by their WireEnum companions — import via types.*
 
-  given Encoder[PermissionRuleValue] = Encoder.instance { r =>
-    Json.obj(
-      "toolName" -> r.toolName.asJson,
-      "ruleContent" -> r.ruleContent.asJson,
-    )
-  }
+  given Encoder[PermissionRuleValue] = Encoder.AsObject.derived
 
   given Encoder[PermissionUpdate] = Encoder.instance { p =>
     val fields = List.newBuilder[(String, Json)]
