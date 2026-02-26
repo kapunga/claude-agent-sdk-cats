@@ -9,7 +9,7 @@ import fs2.Stream
 import io.circe.syntax.*
 import io.circe.{Json, JsonObject}
 
-import io.github.kapunga.claude.sdk.internal.{MessageParser, Query, QueryConfig}
+import io.github.kapunga.claude.sdk.internal.{InternalClient, MessageParser, Query, QueryConfig}
 import io.github.kapunga.claude.sdk.transport.{SubprocessCLITransport, Transport}
 import io.github.kapunga.claude.sdk.types.*
 
@@ -64,17 +64,19 @@ object ClaudeSDKClient:
     customTransport: Option[Transport] = None,
   ): Resource[IO, ClaudeSDKClient] =
     for
-      configuredOptions <- Resource.eval(IO {
+      configuredOptions <- Resource.eval(
         options.canUseTool match
           case Some(_) if options.permissionPromptToolName.isDefined =>
-            throw new IllegalArgumentException(
-              "can_use_tool callback cannot be used with permissionPromptToolName."
+            IO.raiseError(
+              new IllegalArgumentException(
+                "can_use_tool callback cannot be used with permissionPromptToolName."
+              )
             )
           case Some(_) =>
-            options.copy(permissionPromptToolName = Some("stdio"))
+            IO.pure(options.copy(permissionPromptToolName = Some("stdio")))
           case None =>
-            options
-      })
+            IO.pure(options)
+      )
       transport <- customTransport match
         case Some(t) => Resource.pure[IO, Transport](t)
         case None => SubprocessCLITransport.resource(configuredOptions)
@@ -82,16 +84,7 @@ object ClaudeSDKClient:
       internalHooks <- Resource.eval(
         configuredOptions.hooks.traverse(h => Query.convertHooks(h, hookCallbacksRef))
       )
-      agentsJson = configuredOptions.agents.map { agents =>
-        agents.map { case (name, defn) =>
-          val fields = List.newBuilder[(String, Json)]
-          fields += ("description" -> defn.description.asJson)
-          fields += ("prompt" -> defn.prompt.asJson)
-          defn.tools.foreach(t => fields += ("tools" -> t.asJson))
-          defn.model.foreach(m => fields += ("model" -> m.asJson))
-          name -> JsonObject.fromIterable(fields.result())
-        }
-      }
+      agentsJson = configuredOptions.agents.map(InternalClient.buildAgentsJson)
       queryConfig = QueryConfig(
         canUseTool = configuredOptions.canUseTool,
         hooks = internalHooks,
@@ -109,7 +102,7 @@ object ClaudeSDKClient:
       )
       // Initialize the control protocol
       _ <- Resource.eval(queryInst.initialize)
-    yield new ClaudeSDKClientImpl(transport, queryInst)
+    yield ClaudeSDKClientImpl(transport, queryInst)
 
   private class ClaudeSDKClientImpl(
     transport: Transport,
@@ -141,8 +134,8 @@ object ClaudeSDKClient:
 
     def receiveResponse: Stream[IO, Message] =
       receiveMessages.takeThrough {
-        case _: ResultMessage => true
-        case _ => false
+        case _: ResultMessage => false
+        case _ => true
       }
 
     def interrupt: IO[Unit] = queryInst.interrupt

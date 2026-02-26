@@ -9,26 +9,32 @@ object McpCodecs:
 
   given Encoder[McpServerConfig] = Encoder.instance {
     case McpStdioServerConfig(command, args, env) =>
-      val fields = List.newBuilder[(String, Json)]
-      fields += ("type" -> "stdio".asJson)
-      fields += ("command" -> command.asJson)
-      args.foreach(a => fields += ("args" -> a.asJson))
-      env.foreach(e => fields += ("env" -> e.asJson))
-      Json.fromFields(fields.result())
+      Json
+        .obj(
+          "type" -> "stdio".asJson,
+          "command" -> command.asJson,
+          "args" -> args.asJson,
+          "env" -> env.asJson,
+        )
+        .dropNullValues
 
     case McpSSEServerConfig(url, headers) =>
-      val fields = List.newBuilder[(String, Json)]
-      fields += ("type" -> "sse".asJson)
-      fields += ("url" -> url.asJson)
-      headers.foreach(h => fields += ("headers" -> h.asJson))
-      Json.fromFields(fields.result())
+      Json
+        .obj(
+          "type" -> "sse".asJson,
+          "url" -> url.asJson,
+          "headers" -> headers.asJson,
+        )
+        .dropNullValues
 
     case McpHttpServerConfig(url, headers) =>
-      val fields = List.newBuilder[(String, Json)]
-      fields += ("type" -> "http".asJson)
-      fields += ("url" -> url.asJson)
-      headers.foreach(h => fields += ("headers" -> h.asJson))
-      Json.fromFields(fields.result())
+      Json
+        .obj(
+          "type" -> "http".asJson,
+          "url" -> url.asJson,
+          "headers" -> headers.asJson,
+        )
+        .dropNullValues
   }
 
   given Decoder[McpServerConfig] = Decoder.instance { c =>

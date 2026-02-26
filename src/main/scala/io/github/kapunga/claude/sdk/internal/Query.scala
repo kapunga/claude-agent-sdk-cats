@@ -66,26 +66,30 @@ final class Query private (
       hooksConfig = config.hooks.map { hooks =>
         val fields = hooks.map { case (event, matchers) =>
           event -> Json.arr(matchers.map { m =>
-            val f = List.newBuilder[(String, Json)]
-            f += ("matcher" -> m.matcher.asJson)
-            f += ("hookCallbackIds" -> m.hookCallbackIds.asJson)
-            m.timeout.foreach(t => f += ("timeout" -> t.asJson))
-            Json.fromFields(f.result())
+            Json
+              .obj(
+                "matcher" -> m.matcher.asJson,
+                "hookCallbackIds" -> m.hookCallbackIds.asJson,
+                "timeout" -> m.timeout.asJson,
+              )
+              .dropNullValues
           }*)
         }
         JsonObject.fromMap(fields)
       }
-      request = {
-        val f = List.newBuilder[(String, Json)]
-        f += ("subtype" -> "initialize".asJson)
-        f += ("hooks" -> hooksConfig.asJson)
-        config.agents.foreach { agents =>
-          f += ("agents" -> Json.fromJsonObject(
-            JsonObject.fromMap(agents.view.mapValues(Json.fromJsonObject).toMap)
-          ))
-        }
-        JsonObject.fromIterable(f.result())
-      }
+      request = Json
+        .obj(
+          "subtype" -> "initialize".asJson,
+          "hooks" -> hooksConfig.asJson,
+          "agents" -> config.agents
+            .map(a =>
+              Json.fromJsonObject(JsonObject.fromMap(a.view.mapValues(Json.fromJsonObject).toMap))
+            )
+            .asJson,
+        )
+        .dropNullValues
+        .asObject
+        .getOrElse(JsonObject.empty)
       response <- sendControlRequest(request, config.initializeTimeout)
       _ <- initResultRef.set(Some(response))
     yield Some(response)
@@ -188,7 +192,7 @@ final class Query private (
                   val result =
                     if isError then
                       val err = response("error").flatMap(_.asString).getOrElse("Unknown error")
-                      Left(new ControlProtocolError(err))
+                      Left(ControlProtocolError(err))
                     else Right(response("response").flatMap(_.asObject).getOrElse(JsonObject.empty))
                   (pending - id, deferred.complete(result).void)
             }.flatten
@@ -284,7 +288,7 @@ final class Query private (
         timeout,
         pendingResponses.update(_ - requestId) >>
           IO.raiseError(
-            new ControlProtocolError(
+            ControlProtocolError(
               s"Control request timeout: ${request("subtype").flatMap(_.asString).getOrElse("unknown")}"
             )
           ),
@@ -321,7 +325,7 @@ object Query:
       initResultRef <- Ref.of[IO, Option[JsonObject]](None)
       firstResultDeferred <- Deferred[IO, Unit]
       supervisor <- Supervisor[IO](await = false).allocated.map(_._1)
-    yield new Query(
+    yield Query(
       transport,
       config,
       pendingResponses,
@@ -350,7 +354,7 @@ object Query:
       initResultRef <- Resource.eval(Ref.of[IO, Option[JsonObject]](None))
       firstResultDeferred <- Resource.eval(Deferred[IO, Unit])
       supervisor <- Supervisor[IO](await = false)
-    yield new Query(
+    yield Query(
       transport,
       config,
       pendingResponses,

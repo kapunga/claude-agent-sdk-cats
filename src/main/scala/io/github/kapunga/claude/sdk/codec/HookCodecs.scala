@@ -110,65 +110,76 @@ object HookCodecs:
     case HookJsonOutput.Async(output) =>
       Json
         .obj(
-          "async" -> Json.True
+          "async" -> Json.True,
+          "asyncTimeout" -> output.asyncTimeout.asJson,
         )
-        .deepMerge(
-          output.asyncTimeout.fold(Json.obj())(t => Json.obj("asyncTimeout" -> t.asJson))
-        )
+        .dropNullValues
     case HookJsonOutput.Sync(output) =>
-      val fields = List.newBuilder[(String, Json)]
-      output.continue_.foreach(v => fields += ("continue" -> v.asJson))
-      output.suppressOutput.foreach(v => fields += ("suppressOutput" -> v.asJson))
-      output.stopReason.foreach(v => fields += ("stopReason" -> v.asJson))
-      output.decision.foreach(v => fields += ("decision" -> v.asJson))
-      output.systemMessage.foreach(v => fields += ("systemMessage" -> v.asJson))
-      output.reason.foreach(v => fields += ("reason" -> v.asJson))
-      output.hookSpecificOutput.foreach { hso =>
-        fields += ("hookSpecificOutput" -> encodeHookSpecificOutput(hso))
-      }
-      Json.fromFields(fields.result())
+      Json
+        .obj(
+          "continue" -> output.continue_.asJson,
+          "suppressOutput" -> output.suppressOutput.asJson,
+          "stopReason" -> output.stopReason.asJson,
+          "decision" -> output.decision.asJson,
+          "systemMessage" -> output.systemMessage.asJson,
+          "reason" -> output.reason.asJson,
+          "hookSpecificOutput" -> output.hookSpecificOutput.map(encodeHookSpecificOutput).asJson,
+        )
+        .dropNullValues
   }
 
   private def encodeHookSpecificOutput(hso: HookSpecificOutput): Json = hso match
     case HookSpecificOutput.PreToolUse(o) =>
-      val fields = List.newBuilder[(String, Json)]
-      fields += ("hookEventName" -> HookEvent.PreToolUse.wireValue.asJson)
-      o.permissionDecision.foreach(v => fields += ("permissionDecision" -> v.wireValue.asJson))
-      o.permissionDecisionReason.foreach(v => fields += ("permissionDecisionReason" -> v.asJson))
-      o.updatedInput.foreach(v => fields += ("updatedInput" -> v.asJson))
-      o.additionalContext.foreach(v => fields += ("additionalContext" -> v.asJson))
-      Json.fromFields(fields.result())
+      Json
+        .obj(
+          "hookEventName" -> HookEvent.PreToolUse.wireValue.asJson,
+          "permissionDecision" -> o.permissionDecision.map(_.wireValue).asJson,
+          "permissionDecisionReason" -> o.permissionDecisionReason.asJson,
+          "updatedInput" -> o.updatedInput.asJson,
+          "additionalContext" -> o.additionalContext.asJson,
+        )
+        .dropNullValues
 
     case HookSpecificOutput.PostToolUse(o) =>
-      val fields = List.newBuilder[(String, Json)]
-      fields += ("hookEventName" -> HookEvent.PostToolUse.wireValue.asJson)
-      o.additionalContext.foreach(v => fields += ("additionalContext" -> v.asJson))
-      o.updatedMCPToolOutput.foreach(v => fields += ("updatedMCPToolOutput" -> v))
-      Json.fromFields(fields.result())
+      Json
+        .obj(
+          "hookEventName" -> HookEvent.PostToolUse.wireValue.asJson,
+          "additionalContext" -> o.additionalContext.asJson,
+          "updatedMCPToolOutput" -> o.updatedMCPToolOutput.asJson,
+        )
+        .dropNullValues
 
     case HookSpecificOutput.PostToolUseFailure(o) =>
-      val fields = List.newBuilder[(String, Json)]
-      fields += ("hookEventName" -> HookEvent.PostToolUseFailure.wireValue.asJson)
-      o.additionalContext.foreach(v => fields += ("additionalContext" -> v.asJson))
-      Json.fromFields(fields.result())
+      Json
+        .obj(
+          "hookEventName" -> HookEvent.PostToolUseFailure.wireValue.asJson,
+          "additionalContext" -> o.additionalContext.asJson,
+        )
+        .dropNullValues
 
     case HookSpecificOutput.UserPromptSubmit(o) =>
-      val fields = List.newBuilder[(String, Json)]
-      fields += ("hookEventName" -> HookEvent.UserPromptSubmit.wireValue.asJson)
-      o.additionalContext.foreach(v => fields += ("additionalContext" -> v.asJson))
-      Json.fromFields(fields.result())
+      Json
+        .obj(
+          "hookEventName" -> HookEvent.UserPromptSubmit.wireValue.asJson,
+          "additionalContext" -> o.additionalContext.asJson,
+        )
+        .dropNullValues
 
     case HookSpecificOutput.Notification(o) =>
-      val fields = List.newBuilder[(String, Json)]
-      fields += ("hookEventName" -> HookEvent.Notification.wireValue.asJson)
-      o.additionalContext.foreach(v => fields += ("additionalContext" -> v.asJson))
-      Json.fromFields(fields.result())
+      Json
+        .obj(
+          "hookEventName" -> HookEvent.Notification.wireValue.asJson,
+          "additionalContext" -> o.additionalContext.asJson,
+        )
+        .dropNullValues
 
     case HookSpecificOutput.SubagentStart(o) =>
-      val fields = List.newBuilder[(String, Json)]
-      fields += ("hookEventName" -> HookEvent.SubagentStart.wireValue.asJson)
-      o.additionalContext.foreach(v => fields += ("additionalContext" -> v.asJson))
-      Json.fromFields(fields.result())
+      Json
+        .obj(
+          "hookEventName" -> HookEvent.SubagentStart.wireValue.asJson,
+          "additionalContext" -> o.additionalContext.asJson,
+        )
+        .dropNullValues
 
     case HookSpecificOutput.PermissionRequest(o) =>
       Json.obj(

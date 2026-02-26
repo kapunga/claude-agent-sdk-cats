@@ -15,7 +15,7 @@ object ControlCodecs:
       subtype <- reqC.downField("subtype").as[String]
       request <- subtype match
         case "interrupt" =>
-          Right(SDKControlInterruptRequest())
+          Right(SDKControlInterruptRequest)
         case "can_use_tool" =>
           for
             toolName <- reqC.downField("tool_name").as[String]

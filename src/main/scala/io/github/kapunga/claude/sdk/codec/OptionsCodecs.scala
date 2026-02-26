@@ -14,32 +14,38 @@ object OptionsCodecs:
   // SettingSource, SdkBeta, Effort codecs are provided by their WireEnum companions — import via types.*
 
   given Encoder[SandboxNetworkConfig] = Encoder.instance { n =>
-    val fields = List.newBuilder[(String, Json)]
-    n.allowUnixSockets.foreach(v => fields += ("allowUnixSockets" -> v.asJson))
-    n.allowAllUnixSockets.foreach(v => fields += ("allowAllUnixSockets" -> v.asJson))
-    n.allowLocalBinding.foreach(v => fields += ("allowLocalBinding" -> v.asJson))
-    n.httpProxyPort.foreach(v => fields += ("httpProxyPort" -> v.asJson))
-    n.socksProxyPort.foreach(v => fields += ("socksProxyPort" -> v.asJson))
-    Json.fromFields(fields.result())
+    Json
+      .obj(
+        "allowUnixSockets" -> n.allowUnixSockets.asJson,
+        "allowAllUnixSockets" -> n.allowAllUnixSockets.asJson,
+        "allowLocalBinding" -> n.allowLocalBinding.asJson,
+        "httpProxyPort" -> n.httpProxyPort.asJson,
+        "socksProxyPort" -> n.socksProxyPort.asJson,
+      )
+      .dropNullValues
   }
 
   given Encoder[SandboxIgnoreViolations] = Encoder.instance { i =>
-    val fields = List.newBuilder[(String, Json)]
-    i.file.foreach(v => fields += ("file" -> v.asJson))
-    i.network.foreach(v => fields += ("network" -> v.asJson))
-    Json.fromFields(fields.result())
+    Json
+      .obj(
+        "file" -> i.file.asJson,
+        "network" -> i.network.asJson,
+      )
+      .dropNullValues
   }
 
   given Encoder[SandboxSettings] = Encoder.instance { s =>
-    val fields = List.newBuilder[(String, Json)]
-    s.enabled.foreach(v => fields += ("enabled" -> v.asJson))
-    s.autoAllowBashIfSandboxed.foreach(v => fields += ("autoAllowBashIfSandboxed" -> v.asJson))
-    s.excludedCommands.foreach(v => fields += ("excludedCommands" -> v.asJson))
-    s.allowUnsandboxedCommands.foreach(v => fields += ("allowUnsandboxedCommands" -> v.asJson))
-    s.network.foreach(v => fields += ("network" -> v.asJson))
-    s.ignoreViolations.foreach(v => fields += ("ignoreViolations" -> v.asJson))
-    s.enableWeakerNestedSandbox.foreach(v => fields += ("enableWeakerNestedSandbox" -> v.asJson))
-    Json.fromFields(fields.result())
+    Json
+      .obj(
+        "enabled" -> s.enabled.asJson,
+        "autoAllowBashIfSandboxed" -> s.autoAllowBashIfSandboxed.asJson,
+        "excludedCommands" -> s.excludedCommands.asJson,
+        "allowUnsandboxedCommands" -> s.allowUnsandboxedCommands.asJson,
+        "network" -> s.network.asJson,
+        "ignoreViolations" -> s.ignoreViolations.asJson,
+        "enableWeakerNestedSandbox" -> s.enableWeakerNestedSandbox.asJson,
+      )
+      .dropNullValues
   }
 
   given Encoder[ThinkingConfig] = Encoder.instance {
@@ -50,10 +56,12 @@ object OptionsCodecs:
   }
 
   given Encoder[AgentDefinition] = Encoder.instance { a =>
-    val fields = List.newBuilder[(String, Json)]
-    fields += ("description" -> a.description.asJson)
-    fields += ("prompt" -> a.prompt.asJson)
-    a.tools.foreach(v => fields += ("tools" -> v.asJson))
-    a.model.foreach(v => fields += ("model" -> v.asJson))
-    Json.fromFields(fields.result())
+    Json
+      .obj(
+        "description" -> a.description.asJson,
+        "prompt" -> a.prompt.asJson,
+        "tools" -> a.tools.asJson,
+        "model" -> a.model.asJson,
+      )
+      .dropNullValues
   }

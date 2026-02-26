@@ -33,7 +33,7 @@ private[sdk] object SubprocessCLITransport:
       val fromPath = pathDirs.map(d => Paths.get(d, "claude")).find(p => Files.isExecutable(p))
 
       fromPath match
-        case Some(p) => p.toString
+        case Some(p) => Some(p.toString)
         case None =>
           val home = System.getProperty("user.home")
           val locations = List(
@@ -44,15 +44,18 @@ private[sdk] object SubprocessCLITransport:
             s"$home/.yarn/bin/claude",
             s"$home/.claude/local/claude",
           )
-          locations.find(p => Files.isExecutable(Paths.get(p))) match
-            case Some(p) => p
-            case None =>
-              throw CLINotFoundError(
-                "Claude Code not found. Install with:\n" +
-                  "  npm install -g @anthropic-ai/claude-code\n" +
-                  "\nOr provide the path via ClaudeAgentOptions:\n" +
-                  "  ClaudeAgentOptions(cliPath = Some(\"/path/to/claude\"))"
-              )
+          locations.find(p => Files.isExecutable(Paths.get(p)))
+    }.flatMap {
+      case Some(p) => IO.pure(p)
+      case None =>
+        IO.raiseError(
+          CLINotFoundError(
+            "Claude Code not found. Install with:\n" +
+              "  npm install -g @anthropic-ai/claude-code\n" +
+              "\nOr provide the path via ClaudeAgentOptions:\n" +
+              "  ClaudeAgentOptions(cliPath = Some(\"/path/to/claude\"))"
+          )
+        )
     }
 
   /** Build the CLI command line arguments. */
@@ -203,8 +206,10 @@ private[sdk] object SubprocessCLITransport:
       cliPath <- Resource.eval(findCli(options.cliPath))
       cmd = buildCommand(cliPath, options)
       ready <- Resource.eval(Ref.of[IO, Boolean](false))
+      stdinWriteRef <- Resource.eval(Ref.of[IO, Option[String => IO[Unit]]](None))
+      stdinCloseRef <- Resource.eval(Ref.of[IO, Option[IO[Unit]]](None))
       transport <- Resource.make(
-        IO.pure(new SubprocessCLITransportImpl(cmd, options, ready))
+        IO.pure(new SubprocessCLITransportImpl(cmd, options, ready, stdinWriteRef, stdinCloseRef))
       )(_ => IO.unit) // Process cleanup handled by fs2
     yield transport
 
@@ -212,48 +217,56 @@ private[sdk] object SubprocessCLITransport:
   def jsonBufferPipe(maxBufferSize: Int): Pipe[IO, String, JsonObject] =
     lines =>
       lines
-        .scan(("", Option.empty[JsonObject])) { case ((buffer, _), line) =>
+        .scan(("", Option.empty[Either[Throwable, JsonObject]])) { case ((buffer, _), line) =>
           val trimmed = line.trim
           if trimmed.isEmpty then (buffer, None)
           else
             val newBuffer = buffer + trimmed
             if newBuffer.length > maxBufferSize then
-              throw new CLIJSONDecodeError(
-                s"JSON message exceeded maximum buffer size of $maxBufferSize bytes",
-                new RuntimeException(
-                  s"Buffer size ${newBuffer.length} exceeds limit $maxBufferSize"
+              (
+                "",
+                Some(
+                  Left(
+                    CLIJSONDecodeError(
+                      s"JSON message exceeded maximum buffer size of $maxBufferSize bytes",
+                      new RuntimeException(
+                        s"Buffer size ${newBuffer.length} exceeds limit $maxBufferSize"
+                      ),
+                    )
+                  )
                 ),
               )
-            parser.parse(newBuffer) match
-              case Right(json) =>
-                json.asObject match
-                  case Some(obj) => ("", Some(obj))
-                  case None => (newBuffer, None)
-              case Left(_) =>
-                (newBuffer, None)
+            else
+              parser.parse(newBuffer) match
+                case Right(json) =>
+                  json.asObject match
+                    case Some(obj) => ("", Some(Right(obj)))
+                    case None => (newBuffer, None)
+                case Left(_) =>
+                  (newBuffer, None)
         }
-        .collect { case (_, Some(obj)) => obj }
+        .collect { case (_, Some(result)) => result }
+        .rethrow
 
 private class SubprocessCLITransportImpl(
   cmd: List[String],
   options: ClaudeAgentOptions,
   readyRef: Ref[IO, Boolean],
+  stdinWriteRef: Ref[IO, Option[String => IO[Unit]]],
+  stdinCloseRef: Ref[IO, Option[IO[Unit]]],
 ) extends Transport:
 
   private val maxBufferSize =
     options.maxBufferSize.getOrElse(SubprocessCLITransport.DefaultMaxBufferSize)
 
-  // We'll store a reference to stdin write function when process starts
-  @volatile private var stdinWrite: Option[String => IO[Unit]] = None
-  @volatile private var stdinClose: Option[IO[Unit]] = None
-
   def write(data: String): IO[Unit] =
     readyRef.get.flatMap {
-      case false => IO.raiseError(new CLIConnectionError("Transport is not ready for writing"))
+      case false => IO.raiseError(CLIConnectionError("Transport is not ready for writing"))
       case true =>
-        stdinWrite match
+        stdinWriteRef.get.flatMap {
           case Some(w) => w(data)
-          case None => IO.raiseError(new CLIConnectionError("stdin not available"))
+          case None => IO.raiseError(CLIConnectionError("stdin not available"))
+        }
     }
 
   def readMessages: Stream[IO, JsonObject] =
@@ -286,18 +299,17 @@ private class SubprocessCLITransportImpl(
         .through(SubprocessCLITransport.jsonBufferPipe(maxBufferSize))
 
       // Make stdin available for write() and endInput()
-      Stream.exec(IO {
-        stdinWrite = Some { (data: String) =>
+      Stream.exec(
+        stdinWriteRef.set(Some { (data: String) =>
           Stream.emit(data).through(fs2.text.utf8.encode).through(stdinPipe).compile.drain
-        }
-        stdinClose = Some(IO.unit) // Process resource handles cleanup
-      }) ++
+        }) >> stdinCloseRef.set(Some(IO.unit))
+      ) ++
         Stream.exec(readyRef.set(true)) ++
         stdoutStream ++
         Stream.exec(readyRef.set(false))
     }
 
   def endInput: IO[Unit] =
-    stdinClose.getOrElse(IO.unit)
+    stdinCloseRef.get.flatMap(_.getOrElse(IO.unit))
 
   def isReady: IO[Boolean] = readyRef.get

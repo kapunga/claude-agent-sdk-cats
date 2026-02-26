@@ -7,7 +7,7 @@ import io.circe.{Json, JsonObject}
 /** SDK control request subtypes from the CLI. */
 sealed trait SDKControlRequestData
 
-final case class SDKControlInterruptRequest() extends SDKControlRequestData
+case object SDKControlInterruptRequest extends SDKControlRequestData
 
 final case class SDKControlPermissionRequest(
   toolName: String,

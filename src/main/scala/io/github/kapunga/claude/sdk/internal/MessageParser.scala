@@ -27,7 +27,7 @@ object MessageParser:
             typeJson.asString match
               case Some(t) if isKnownType(t) =>
                 IO.raiseError(
-                  new MessageParseError(
+                  MessageParseError(
                     s"Failed to parse $t message: ${failure.message}",
                     Some(data),
                   )
@@ -36,7 +36,7 @@ object MessageParser:
                 // Unknown type - skip silently for forward compatibility
                 IO.pure(None)
           case None =>
-            IO.raiseError(new MessageParseError("Message missing 'type' field", Some(data)))
+            IO.raiseError(MessageParseError("Message missing 'type' field", Some(data)))
 
   private def isKnownType(t: String): Boolean =
     t == "user" || t == "assistant" || t == "system" || t == "result" || t == "stream_event"
